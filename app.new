@@ -1,0 +1,935 @@
+require('dotenv').config();
+const express = require('express');
+const session = require('express-session');
+const bodyParser = require('body-parser');
+const methodOverride = require('method-override');
+const path = require('path');
+const { db, init, logAction, getSidebarPages, canAccessPage } = require('./db');
+const bcrypt = require('bcrypt');
+const expressLayouts = require('express-ejs-layouts');
+const multer = require('multer');
+const fs = require('fs');
+const app = express();
+app.use('/main-site', express.static(path.join(__dirname, 'public/main-site')));
+
+// ======================
+// إعدادات المحرك والملفات الثابتة
+// ======================
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.use(expressLayouts);
+app.set('layout', 'layout');
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/css', express.static(path.join(__dirname, 'public/css')));
+app.use('/js', express.static(path.join(__dirname, 'public/js')));
+app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(methodOverride('_method'));
+
+// ======================
+// إعداد الجلسات
+// ======================
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'zarah-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
+}));
+
+// ======================
+// متغيرات عامة للـ layout
+// ======================
+app.locals.systemName = process.env.SYSTEM_NAME || 'شركة زرعة الخير للنقليات / فرع الكسارة';
+app.locals.companyName = process.env.COMPANY_NAME || 'مجموعة زرعة الخير للتطوير والاستثمار العقاري';
+app.locals.formatDate = function(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  return d.toLocaleString('ar-EG');
+};
+
+// ======================
+// تهيئة قاعدة البيانات (استدعاء init من db.js)
+// ======================
+init();
+
+
+function syncSystemPages() {
+  const systemPages = [
+    ['main_site', 'الموقع الرئيسي', '/main-site/index.html', '🌐', 5],
+    ['dashboard', '\u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629', '/dashboard', '\ud83d\udcca', 10],
+    ['orders', '\u0627\u0644\u0637\u0644\u0628\u0627\u062a', '/orders', '\ud83d\udcdd', 20],
+    ['factory_orders', '\u0637\u0644\u0628\u0627\u062a \u0627\u0644\u0645\u0635\u0646\u0639', '/factory_orders', '\ud83c\udfed', 25],
+    ['distribution', '\u0627\u0644\u062a\u0648\u0632\u064a\u0639', '/distribution', '\ud83d\ude9a', 30],
+    ['distribution_quality', '\u062c\u0648\u062f\u0629 \u0627\u0644\u062a\u0648\u0632\u064a\u0639', '/distribution-quality', '\ud83d\udcca', 35],
+    ['drivers', '\u0627\u0644\u0633\u0627\u0626\u0642\u064a\u0646', '/drivers', '\ud83d\udc68\u200d\u2708\ufe0f', 40],
+    ['trucks', '\u0627\u0644\u0633\u064a\u0627\u0631\u0627\u062a', '/trucks', '\ud83d\ude9b', 45],
+    ['trucks_failed', '\u0627\u0644\u0633\u064a\u0627\u0631\u0627\u062a \u063a\u064a\u0631 \u0627\u0644\u0645\u0633\u062a\u0648\u0641\u064a\u0629', '/trucks-failed', '\u26a0\ufe0f', 50],
+    ['trucks_failed_report', '\u062a\u0642\u0631\u064a\u0631 \u0627\u0644\u0645\u062e\u0627\u0644\u0641\u0627\u062a', '/trucks-failed-report', '\ud83d\udccb', 55],
+    ['expenses', '\u0645\u0635\u0627\u0631\u064a\u0641 \u0627\u0644\u0633\u064a\u0627\u0631\u0627\u062a', '/expenses', '\ud83d\udcb0', 60],
+    ['materials', '\u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0628\u062d\u0635', '/materials', '\ud83d\udce6', 70],
+    ['factories', '\u0627\u0644\u0645\u0635\u0627\u0646\u0639', '/factories', '\ud83c\udfed', 80],
+    ['cash_orders', '\u0627\u0644\u0637\u0644\u0628\u0627\u062a \u0627\u0644\u0646\u0642\u062f\u064a\u0629', '/cash-orders', '\ud83d\udcb5', 90],
+    ['reports', '\u062a\u0642\u0627\u0631\u064a\u0631 \u0627\u0644\u0643\u0633\u0627\u0631\u0629', '/reports', '\ud83d\udcc8', 100],
+    ['scale_report', '\u062a\u0642\u0627\u0631\u064a\u0631 \u0627\u0644\u0645\u064a\u0632\u0627\u0646', '/scale_report', '\u2696\ufe0f', 110],
+    ['blocks', '\u0627\u0644\u062d\u0638\u0631', '/blocks', '\u26d4', 120],
+    ['users', '\u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u064a\u0646', '/users', '\ud83d\udc65', 130],
+    ['logs', '\u0627\u0644\u0633\u062c\u0644\u0627\u062a', '/logs', '\ud83d\udcdc', 140],
+    ['settings', '\u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a', '/settings', '\u2699\ufe0f', 150],
+    ['pages', '\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0635\u0641\u062d\u0627\u062a', '/pages', '\ud83e\udde9', 160],
+    ['contact', '\u0627\u062a\u0635\u0644 \u0628\u0646\u0627', '/contact', '\u260e\ufe0f', 170]
+  ];
+  const select = db.prepare('SELECT id FROM pages WHERE page_key = ?');
+  const insert = db.prepare('INSERT INTO pages (page_key, title, path, icon, sort_order, is_active, is_system, content_html) VALUES (?, ?, ?, ?, ?, 1, 1, ?)');
+  const update = db.prepare('UPDATE pages SET title = ?, path = ?, icon = ?, sort_order = ?, is_active = 1, is_system = 1 WHERE page_key = ?');
+  for (const [key, title, routePath, icon, sort] of systemPages) {
+    const existing = select.get(key);
+    if (existing) update.run(title, routePath, icon, sort, key);
+    else insert.run(key, title, routePath, icon, sort, '');
+  }
+}
+syncSystemPages();
+
+function loadAutoPages() {
+  const autoDir = path.join(__dirname, 'views', 'auto_pages');
+  if (!fs.existsSync(autoDir)) return [];
+  return fs.readdirSync(autoDir)
+    .filter(file => file.endsWith('.ejs'))
+    .map(file => {
+      const slug = file.replace(/\.ejs$/, '');
+      const fullPath = path.join(autoDir, file);
+      const content = fs.readFileSync(fullPath, 'utf8');
+      const title = (content.match(/<!--\s*title:\s*(.*?)\s*-->/i) || [])[1] || slug;
+      const icon = (content.match(/<!--\s*icon:\s*(.*?)\s*-->/i) || [])[1] || '\ud83d\udcc4';
+      const sort = Number((content.match(/<!--\s*sort:\s*(.*?)\s*-->/i) || [])[1] || 300);
+      return { slug, view: `auto_pages/${slug}`, path: `/auto-pages/${slug}`, title, icon, sort };
+    })
+    .sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'ar'));
+}
+
+function getCustomSidebarPagesForUser(user) {
+  if (!user) return [];
+  try {
+    return getSidebarPages(user).filter(p => !p.is_system && p.is_active);
+  } catch (e) {
+    return [];
+  }
+}
+
+const autoPages = loadAutoPages();
+
+app.use((req, res, next) => {
+  res.locals.autoPages = autoPages;
+  res.locals.customSidebarPages = getCustomSidebarPagesForUser(req.session && req.session.user);
+  next();
+});
+
+// إضافة جدول القيود (restrictions) إذا لم يكن موجوداً
+const createRestrictionsTable = () => {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS restrictions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      truck_number TEXT NOT NULL,
+      driver_name TEXT,
+      restricted_factories TEXT,
+      reason TEXT,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      created_by TEXT
+    )
+  `);
+};
+createRestrictionsTable();
+
+// ======================
+// دوال مساعدة عامة
+// ======================
+function getDashboardStats() {
+  const ordersCount = db.prepare("SELECT COUNT(*) as count FROM orders").get().count;
+  const pendingCount = db.prepare("SELECT COUNT(*) as count FROM orders WHERE status != 'completed' AND status != 'cancelled'").get().count;
+  const completedCount = db.prepare("SELECT COUNT(*) as count FROM orders WHERE status = 'completed'").get().count;
+  const driversCount = db.prepare("SELECT COUNT(*) as count FROM drivers WHERE status != 'deleted'").get().count;
+  const availableDrivers = db.prepare("SELECT COUNT(*) as count FROM drivers WHERE status = 'available'").get().count;
+  const factoriesCount = db.prepare("SELECT COUNT(*) as count FROM factories WHERE is_active = 1").get().count;
+  const materialsCount = db.prepare("SELECT COUNT(*) as count FROM materials WHERE is_active = 1").get().count;
+  const trucksCount = db.prepare("SELECT COUNT(*) as count FROM trucks").get().count;
+  const today = new Date().toISOString().slice(0,10);
+  const distributedTrips = db.prepare(`SELECT COUNT(DISTINCT order_id) as count FROM assignments WHERE DATE(created_at) = ?`).get(today)?.count || 0;
+  const activeTrucks = db.prepare(`SELECT COUNT(DISTINCT driver_id) as count FROM assignments WHERE DATE(created_at) = ?`).get(today)?.count || 0;
+  return {
+    orders: ordersCount, pending: pendingCount, completed: completedCount,
+    drivers: driversCount, available: availableDrivers, trucks: trucksCount,
+    factories: factoriesCount, materials: materialsCount,
+    totalOrders: ordersCount, distributedTrips, activeTrucks
+  };
+}
+
+function requireAuth(req, res, next) {
+  if (!req.session.user) return res.redirect('/login');
+  next();
+}
+
+// ======================
+// المسارات الرئيسية (الصفحات)
+// ======================
+
+app.get('/login', (req, res) => {
+  if (req.session.user) return res.redirect('/');
+  res.render('login', { title: 'تسجيل الدخول', flash: null, layout: false });
+});
+
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.render('login', { title: 'تسجيل الدخول', flash: { type: 'error', message: 'يرجى إدخال اسم المستخدم وكلمة السر' }, layout: false });
+  }
+  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+    return res.render('login', { title: 'تسجيل الدخول', flash: { type: 'error', message: 'بيانات غير صحيحة' }, layout: false });
+  }
+  req.session.user = {
+    id: user.id,
+    username: user.username,
+    name: user.name,
+    role: user.role,
+    factory_id: user.factory_id
+  };
+  res.redirect('/');
+});
+
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => res.redirect('/login'));
+});
+
+// الصفحة الرئيسية (Dashboard) - مع تصحيح الاستعلام (تمت إزالة driver و truck)
+function renderDashboard(req, res) {
+  const stats = getDashboardStats();
+  const recentOrders = db.prepare(`
+    SELECT o.id, o.requested_time, o.status, f.name as factory_name, m.name as material_name
+    FROM orders o
+    LEFT JOIN factories f ON o.factory_id = f.id
+    LEFT JOIN materials m ON o.material_id = m.id
+    ORDER BY o.created_at DESC LIMIT 5
+  `).all();
+  res.render('dashboard', {
+    title: '\u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629',
+    user: req.session.user,
+    stats: stats,
+    recentOrders: recentOrders,
+    currentPath: req.path === '/dashboard' ? '/dashboard' : '/'
+  });
+}
+app.get('/', requireAuth, renderDashboard);
+app.get('/dashboard', requireAuth, renderDashboard);
+
+app.get('/orders', requireAuth, (req, res) => res.render('orders', { title: 'الطلبات', user: req.session.user, currentPath: '/orders' }));
+app.get('/distribution', requireAuth, (req, res) => res.render('distribution', { title: 'التوزيع', user: req.session.user, currentPath: '/distribution' }));
+app.get('/drivers', requireAuth, (req, res) => res.render('drivers', { title: 'السائقين', user: req.session.user, currentPath: '/drivers' }));
+app.get('/trucks', requireAuth, (req, res) => res.render('trucks', { title: 'السيارات', user: req.session.user, currentPath: '/trucks' }));
+app.get('/materials', requireAuth, (req, res) => res.render('materials', { title: 'أنواع البحص', user: req.session.user, currentPath: '/materials' }));
+app.get('/factories', requireAuth, (req, res) => res.render('factories', { title: 'المصانع', user: req.session.user, currentPath: '/factories' }));
+app.get('/reports', requireAuth, (req, res) => res.render('reports', { title: 'التقارير', user: req.session.user, currentPath: '/reports' }));
+app.get('/scale_report', requireAuth, (req, res) => res.render('scale_report', { title: 'تقارير الميزان', user: req.session.user, currentPath: '/scale_report' }));
+app.get('/distribution-quality', requireAuth, (req, res) => res.render('distribution-quality', { title: 'جودة التوزيع', user: req.session.user, currentPath: '/distribution-quality' }));
+app.get('/trucks-failed', requireAuth, (req, res) => res.render('trucks-failed', { title: 'السيارات غير المستوفية', user: req.session.user, currentPath: '/trucks-failed' }));
+app.get('/trucks-failed-report', requireAuth, (req, res) => res.render('trucks-failed-report', { title: 'تقرير المخالفات', user: req.session.user, currentPath: '/trucks-failed-report' }));
+function renderExpensesPage(req, res) {
+  res.render('expenses', {
+    title: 'مصاريف السيارات',
+    user: req.session.user,
+    currentPath: '/expenses'
+  });
+}
+
+function renderCashOrdersPage(req, res) {
+  res.render('cash_orders', {
+    title: 'الطلبات النقدية',
+    user: req.session.user,
+    currentPath: '/cash-orders'
+  });
+}
+
+// صفحات المصاريف والطلبات النقدية: دعم كل صيغ الروابط حتى لا تظهر كأنها غير موجودة.
+app.get(['/expenses', '/expenses.html', '/car-expenses', '/cars-expenses', '/truck-expenses', '/trucks-expenses', '/car_expenses', '/cars_expenses', '/truck_expenses', '/trucks_expenses'], requireAuth, renderExpensesPage);
+app.get(/^\/(?:car|cars|truck|trucks)[-_ ]?expenses(?:\.html)?$/i, requireAuth, renderExpensesPage);
+
+app.get(['/cash_orders', '/cash-orders', '/cashorders', '/cash_orders.html', '/cash-orders.html'], requireAuth, renderCashOrdersPage);
+app.get(/^\/cash[-_ ]?orders(?:\.html)?$/i, requireAuth, renderCashOrdersPage);
+app.get('/settings', requireAuth, (req, res) => res.render('settings', { title: 'الإعدادات', user: req.session.user, currentPath: '/settings' }));
+app.get('/blocks', requireAuth, (req, res) => res.render('blocks', { title: 'الحظر', user: req.session.user, currentPath: '/blocks' }));
+app.get('/users', requireAuth, (req, res) => res.render('users', { title: 'المستخدمين', user: req.session.user, currentPath: '/users' }));
+app.get('/logs', requireAuth, (req, res) => res.render('logs', { title: 'السجلات', user: req.session.user, currentPath: '/logs' }));
+
+function renderFactoryOrders(req, res) {
+  try {
+    const user = req.session.user;
+    const factories = db.prepare('SELECT id, name, distance_km, city FROM factories WHERE is_active = 1 ORDER BY name').all();
+    const materials = db.prepare('SELECT id, name FROM materials WHERE is_active = 1 ORDER BY name').all();
+    let factory = null;
+    let where = '';
+    const params = [];
+
+    if (user.role === 'factory' && user.factory_id) {
+      factory = db.prepare('SELECT * FROM factories WHERE id = ?').get(user.factory_id);
+      where = 'WHERE o.factory_id = ?';
+      params.push(user.factory_id);
+    }
+
+    const orders = db.prepare(`
+      SELECT o.id, o.requested_time, o.quantity, o.status, o.notes,
+             m.name AS material_name,
+             COALESCE(a.truck_number, t.plate_number, '') AS truck_number,
+             COALESCE(d.name, t.driver_name, '') AS driver_name
+      FROM orders o
+      LEFT JOIN materials m ON o.material_id = m.id
+      LEFT JOIN assignments a ON a.order_id = o.id
+      LEFT JOIN drivers d ON a.driver_id = d.id
+      LEFT JOIN trucks t ON d.current_truck_id = t.id
+      ${where}
+      ORDER BY o.created_at DESC, o.id DESC
+      LIMIT 200
+    `).all(...params);
+
+    res.render('factory_orders', {
+      title: 'طلبات المصنع',
+      user,
+      currentPath: '/factory_orders',
+      factory,
+      factories,
+      materials,
+      orders
+    });
+  } catch (err) {
+    res.status(500).send('خطأ في تحميل طلبات المصنع: ' + err.message);
+  }
+}
+
+app.get('/factory_orders', requireAuth, renderFactoryOrders);
+app.get('/factory/orders', requireAuth, renderFactoryOrders);
+
+app.post('/factory/orders', requireAuth, (req, res) => {
+  try {
+    const user = req.session.user;
+    const factoryId = user.role === 'factory' ? user.factory_id : Number(req.body.factory_id);
+    const materialId = Number(req.body.material_id);
+    const requestedTime = req.body.requested_time;
+    const quantity = Number(req.body.quantity || 1);
+    const notes = req.body.notes || '';
+
+    if (!factoryId || !materialId || !requestedTime) {
+      return res.status(400).send('بيانات الطلب غير مكتملة');
+    }
+
+    const info = db.prepare(`
+      INSERT INTO orders (factory_id, material_id, requested_time, quantity, notes, status, created_by)
+      VALUES (?, ?, ?, ?, ?, 'جديد', ?)
+    `).run(factoryId, materialId, requestedTime, quantity, notes, user.id);
+    logAction(user.id, 'إنشاء طلب مصنع', 'orders', info.lastInsertRowid, notes);
+    res.redirect('/factory/orders');
+  } catch (err) {
+    res.status(500).send('خطأ في حفظ طلب المصنع: ' + err.message);
+  }
+});
+
+function renderPagesManager(req, res) {
+  try {
+    if (req.session.user.role !== 'admin') return res.status(403).send('غير مصرح');
+    const pagesList = db.prepare('SELECT * FROM pages ORDER BY sort_order, id').all();
+    res.render('pages', { title: 'إدارة الصفحات', user: req.session.user, currentPath: '/pages', pagesList });
+  } catch (err) {
+    res.status(500).send('خطأ في تحميل إدارة الصفحات: ' + err.message);
+  }
+}
+
+app.get('/pages', requireAuth, renderPagesManager);
+
+app.post('/pages', requireAuth, (req, res) => {
+  try {
+    if (req.session.user.role !== 'admin') return res.status(403).send('غير مصرح');
+    const title = (req.body.title || '').trim();
+    const rawSlug = (req.body.slug || '').trim().replace(/^\/+|\/+$/g, '');
+    const slug = rawSlug.replace(/[^A-Za-z0-9_\-\u0600-\u06FF]/g, '-');
+    if (!title || !slug) return res.status(400).send('عنوان الصفحة والرابط مطلوبان');
+    const pathValue = '/' + slug;
+    const pageKey = slug.toLowerCase();
+    db.prepare(`
+      INSERT INTO pages (page_key, title, path, icon, sort_order, is_active, is_system, content_html)
+      VALUES (?, ?, ?, ?, ?, 1, 0, ?)
+    `).run(pageKey, title, pathValue, req.body.icon || '📄', Number(req.body.sort_order || 200), req.body.content_html || '');
+    res.redirect('/pages');
+  } catch (err) {
+    res.status(500).send('خطأ في إضافة الصفحة: ' + err.message);
+  }
+});
+
+app.post('/pages/:id', requireAuth, (req, res) => {
+  try {
+    if (req.session.user.role !== 'admin') return res.status(403).send('غير مصرح');
+    db.prepare(`
+      UPDATE pages SET title = ?, icon = ?, sort_order = ?, is_active = ?, content_html = ?
+      WHERE id = ?
+    `).run(req.body.title || '', req.body.icon || '📄', Number(req.body.sort_order || 100), req.body.is_active ? 1 : 0, req.body.content_html || '', req.params.id);
+    res.redirect('/pages');
+  } catch (err) {
+    res.status(500).send('خطأ في حفظ الصفحة: ' + err.message);
+  }
+});
+
+app.delete('/pages/:id', requireAuth, (req, res) => {
+  try {
+    if (req.session.user.role !== 'admin') return res.status(403).send('غير مصرح');
+    db.prepare('DELETE FROM pages WHERE id = ? AND is_system = 0').run(req.params.id);
+    res.redirect('/pages');
+  } catch (err) {
+    res.status(500).send('خطأ في حذف الصفحة: ' + err.message);
+  }
+});
+
+// Aliases for paths stored in the pages table / old menu links.
+app.get('/reports/scale', requireAuth, (req, res) => res.redirect('/scale_report'));
+app.get('/reports/non-compliant-cars', requireAuth, (req, res) => res.redirect('/trucks-failed'));
+app.get('/reports/non-compliant', requireAuth, (req, res) => res.redirect('/trucks-failed-report'));
+app.get('/quality', requireAuth, (req, res) => res.redirect('/distribution-quality'));
+app.get('/crusher-reports', requireAuth, (req, res) => res.redirect('/reports'));
+
+app.get('/contact', (req, res) => res.render('contact', { title: 'اتصل بنا', layout: false }));
+
+app.get('/auto-pages/:slug', requireAuth, (req, res, next) => {
+  const page = autoPages.find(p => p.slug === req.params.slug);
+  if (!page) return next();
+  res.render(page.view, {
+    title: page.title,
+    user: req.session.user,
+    currentPath: page.path
+  });
+});
+
+// ======================
+// واجهات API (مع تصحيح الاستعلامات المشابهة)
+// ======================
+
+// 1. معلومات المستخدم الحالي
+app.get('/api/me', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'غير مصرح' });
+  const user = req.session.user;
+  let permissions = {};
+  if (user.role === 'admin') {
+    permissions = {
+      viewOrders: true, addOrders: true, editOrders: true, deleteOrders: true,
+      viewDistribution: true, manageDistribution: true, viewTrucks: true, manageTrucks: true,
+      viewDrivers: true, manageDrivers: true, viewSettings: true, viewReports: true,
+      exportReports: true, manageRestrictions: true, manageUsers: true, viewBackup: true
+    };
+  } else if (user.role === 'employee') {
+    permissions = { viewOrders: true, addOrders: true, editOrders: true, deleteOrders: false };
+  } else if (user.role === 'factory') {
+    permissions = { viewOrders: true, addOrders: true, editOrders: true, deleteOrders: true };
+  }
+  res.json({ user: { ...user, permissions } });
+});
+
+// 2. الإعدادات العامة
+app.get('/api/settings', (req, res) => {
+  try {
+    const factories = db.prepare(`
+      SELECT id, name, distance_km AS distance, city AS location, priority_level, priority_label, is_active
+      FROM factories
+      WHERE is_active = 1
+      ORDER BY name
+    `).all();
+    const materials = db.prepare('SELECT name FROM materials WHERE is_active = 1 ORDER BY name').all().map(m => m.name);
+    const trucks = db.prepare('SELECT id, plate_number as number, model, status, driver_name as driver FROM trucks ORDER BY plate_number').all();
+    const drivers = db.prepare(`
+      SELECT d.*, t.plate_number AS current_truck
+      FROM drivers d
+      LEFT JOIN trucks t ON d.current_truck_id = t.id
+      ORDER BY d.name
+    `).all();
+    res.json({ factories, materials, trucks, drivers });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/settings', (req, res) => {
+  const { factories, materials, trucks } = req.body;
+  try {
+    db.prepare('DELETE FROM factories').run();
+    const insFact = db.prepare('INSERT INTO factories (name, is_active, distance_km, city) VALUES (?, 1, ?, ?)');
+    (factories || []).forEach(f => insFact.run(f.name || f, Number(f.distance || f.distance_km || 0), f.location || f.city || ''));
+    db.prepare('DELETE FROM materials').run();
+    const insMat = db.prepare('INSERT INTO materials (name, is_active) VALUES (?, 1)');
+    (materials || []).forEach(m => insMat.run(m.name || m));
+    db.prepare('DELETE FROM trucks').run();
+    const insTruck = db.prepare('INSERT INTO trucks (plate_number, model, status, driver_name) VALUES (?, ?, ?, ?)');
+    (trucks || []).forEach(t => insTruck.run(t.number || t.plate_number, t.model || '', t.status || 'available', t.driver || t.driver_name || ''));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. إدارة القيود
+app.get('/api/restrictions', (req, res) => {
+  try {
+    const restrictions = db.prepare('SELECT * FROM restrictions ORDER BY id DESC').all();
+    res.json(restrictions);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.post('/api/restrictions', (req, res) => {
+  const { truckNumber, driverName, restrictedFactories, reason } = req.body;
+  if (!truckNumber) return res.status(400).json({ error: 'رقم السيارة مطلوب' });
+  const restrictedJson = JSON.stringify(restrictedFactories || []);
+  const stmt = db.prepare('INSERT INTO restrictions (truck_number, driver_name, restricted_factories, reason, created_by) VALUES (?, ?, ?, ?, ?)');
+  try {
+    stmt.run(truckNumber, driverName || '', restrictedJson, reason || '', req.session.user?.username || 'system');
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.put('/api/restrictions/:id', (req, res) => {
+  const { active } = req.body;
+  try {
+    db.prepare('UPDATE restrictions SET active = ? WHERE id = ?').run(active ? 1 : 0, req.params.id);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.delete('/api/restrictions/:id', (req, res) => {
+  try {
+    db.prepare('DELETE FROM restrictions WHERE id = ?').run(req.params.id);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 4. إدارة المستخدمين
+app.get('/api/users', (req, res) => {
+  try {
+    const users = db.prepare('SELECT id, username, name, role, factory_id, is_active, created_at FROM users ORDER BY id').all();
+    res.json(users);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.post('/api/users', (req, res) => {
+  const { username, password, name, role, permissions } = req.body;
+  if (!username || !password || !name) return res.status(400).json({ error: 'اسم المستخدم، كلمة المرور والاسم مطلوبة' });
+  const hash = bcrypt.hashSync(password, 10);
+  try {
+    const stmt = db.prepare('INSERT INTO users (username, password_hash, name, role) VALUES (?, ?, ?, ?)');
+    const info = stmt.run(username, hash, name, role || 'employee');
+    res.json({ id: info.lastInsertRowid, username, name, role });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.put('/api/users/:id', (req, res) => {
+  const { name, role, password } = req.body;
+  if (!name || !role) return res.status(400).json({ error: 'الاسم والدور مطلوبان' });
+  try {
+    if (password) {
+      const hash = bcrypt.hashSync(password, 10);
+      db.prepare('UPDATE users SET name = ?, role = ?, password_hash = ? WHERE id = ?').run(name, role, hash, req.params.id);
+    } else {
+      db.prepare('UPDATE users SET name = ?, role = ? WHERE id = ?').run(name, role, req.params.id);
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.delete('/api/users/:id', (req, res) => {
+  try {
+    const user = db.prepare('SELECT username FROM users WHERE id = ?').get(req.params.id);
+    if (user?.username === 'Admin') return res.status(400).json({ error: 'لا يمكن حذف المدير الرئيسي' });
+    db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 5. إدارة السجلات
+app.get('/api/logs', (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 50;
+  const offset = (page - 1) * limit;
+  try {
+    const total = db.prepare('SELECT COUNT(*) as count FROM logs').get().count;
+    const logs = db.prepare(`
+      SELECT l.*, u.username 
+      FROM logs l
+      LEFT JOIN users u ON l.user_id = u.id
+      ORDER BY l.created_at DESC LIMIT ? OFFSET ?
+    `).all(limit, offset);
+    res.json({ logs, totalPages: Math.ceil(total / limit), currentPage: page });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.get('/api/logs/all', (req, res) => {
+  try {
+    const logs = db.prepare(`SELECT l.*, u.username FROM logs l LEFT JOIN users u ON l.user_id = u.id ORDER BY l.created_at DESC`).all();
+    res.json(logs);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.delete('/api/logs/clear', (req, res) => {
+  try {
+    db.prepare('DELETE FROM logs').run();
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 6. عمليات اليوم
+app.get('/api/day/:date', (req, res) => {
+  const targetDate = req.params.date;
+  try {
+    const start = `${targetDate} 00:00:00`, end = `${targetDate} 23:59:59`;
+    const orders = db.prepare(`
+      SELECT o.id, f.name as factory_name, m.name as material_name, o.requested_time, o.status
+      FROM orders o
+      LEFT JOIN factories f ON o.factory_id = f.id
+      LEFT JOIN materials m ON o.material_id = m.id
+      WHERE o.requested_time BETWEEN ? AND ?
+    `).all(start, end);
+    const formattedOrders = orders.map(o => ({
+      id: o.id, factory: o.factory_name, material: o.material_name,
+      time: o.requested_time ? new Date(o.requested_time).toLocaleTimeString('ar-EG') : '',
+      timestamp: new Date(o.requested_time).toLocaleString('ar-EG')
+    }));
+    const distribution = db.prepare(`
+      SELECT a.order_id, a.driver_id, a.truck_number, a.road, d.name as driver_name
+      FROM assignments a
+      LEFT JOIN drivers d ON a.driver_id = d.id
+      WHERE DATE(a.created_at) = ?
+    `).all(targetDate);
+    res.json({ orders: formattedOrders, distribution });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+app.put('/api/day/:date', (req, res) => {
+  const targetDate = req.params.date;
+  const { orders: updatedOrders, distribution } = req.body;
+  const start = `${targetDate} 00:00:00`, end = `${targetDate} 23:59:59`;
+  try {
+    db.prepare('BEGIN').run();
+    db.prepare(`DELETE FROM orders WHERE requested_time BETWEEN ? AND ?`).run(start, end);
+    const ins = db.prepare(`INSERT INTO orders (factory_id, material_id, requested_time, status, notes, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))`);
+    for (const ord of updatedOrders) {
+      const factory = db.prepare('SELECT id FROM factories WHERE name = ?').get(ord.factory);
+      const material = db.prepare('SELECT id FROM materials WHERE name = ?').get(ord.material);
+      if (!factory || !material) continue;
+      let dt = `${targetDate} ${ord.time || '12:00:00'}`;
+      if (ord.time && ord.time.includes(':')) dt = `${targetDate} ${ord.time}`;
+      ins.run(factory.id, material.id, dt, 'pending', ord.notes || '');
+    }
+    if (distribution && distribution.length) {
+      db.prepare('DELETE FROM assignments WHERE DATE(created_at) = ?').run(targetDate);
+      const insAssign = db.prepare('INSERT INTO assignments (order_id, driver_id, truck_number, road, created_at) VALUES (?, ?, ?, ?, datetime("now"))');
+      for (const d of distribution) {
+        const driver = db.prepare('SELECT id FROM drivers WHERE name = ?').get(d.driver_name);
+        insAssign.run(d.orderId, driver?.id || null, d.truck?.number || '', d.road || 1);
+      }
+    }
+    db.prepare('COMMIT').run();
+    res.json({ success: true });
+  } catch (err) { db.prepare('ROLLBACK').run(); res.status(500).json({ error: err.message }); }
+});
+
+// 7. بيانات لوحة التحكم (للتحديث التلقائي) - تم تعديلها أيضاً
+app.get('/api/dashboard-data', (req, res) => {
+  try {
+    const stats = getDashboardStats();
+    // FIXED: إزالة join مع drivers و trucks (نفس تعديل الصفحة الرئيسية)
+    const recentOrders = db.prepare(`
+      SELECT o.id, o.requested_time, o.status, f.name as factory_name, m.name as material_name
+      FROM orders o
+      LEFT JOIN factories f ON o.factory_id = f.id
+      LEFT JOIN materials m ON o.material_id = m.id
+      ORDER BY o.created_at DESC LIMIT 5
+    `).all();
+    const factoryStats = db.prepare(`SELECT f.name, COUNT(o.id) as count FROM orders o LEFT JOIN factories f ON o.factory_id = f.id GROUP BY f.name`).all();
+    const materialStats = db.prepare(`SELECT m.name, COUNT(o.id) as count FROM orders o LEFT JOIN materials m ON o.material_id = m.id GROUP BY m.name`).all();
+    const overdueOrders = db.prepare(`SELECT id FROM orders WHERE datetime(requested_time) < datetime('now') AND status NOT IN ('completed','cancelled')`).all();
+    res.json({
+      stats, recentOrders,
+      factoryStats: factoryStats.reduce((a,b)=>(a[b.name]=b.count,a),{}),
+      materialStats: materialStats.reduce((a,b)=>(a[b.name]=b.count,a),{}),
+      overdueOrders
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) return res.status(500).json({ error: 'خطأ' });
+    res.clearCookie('connect.sid');
+    res.json({ success: true });
+  });
+});
+
+// ======================
+// إعداد رفع الملفات (لـ expenses)
+// ======================
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+});
+const upload = multer({ storage: storage });
+
+db.exec(`CREATE TABLE IF NOT EXISTS expense_reports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  filename TEXT,
+  report_name TEXT,
+  report_date TEXT,
+  data TEXT,
+  uploaded_by TEXT,
+  uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP
+)`);
+db.exec(`CREATE TABLE IF NOT EXISTS uploaded_files (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  original_name TEXT,
+  stored_name TEXT,
+  report_name TEXT,
+  uploaded_by TEXT,
+  uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP
+)`);
+
+db.exec(`CREATE TABLE IF NOT EXISTS truck_violations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  report_date TEXT NOT NULL,
+  truck_number TEXT NOT NULL,
+  driver_name TEXT DEFAULT '',
+  trips_count INTEGER DEFAULT 0,
+  reason TEXT DEFAULT '',
+  details TEXT DEFAULT '',
+  created_by TEXT DEFAULT '',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(report_date, truck_number)
+)`);
+
+app.post('/api/upload-excel-report', upload.single('excelFile'), (req, res) => {
+  const { reportName, reportDate, vehicleData } = req.body;
+  const file = req.file;
+  if (!file) return res.status(400).json({ error: 'الملف مطلوب' });
+  try {
+    const stmt = db.prepare('INSERT INTO expense_reports (filename, report_name, report_date, data, uploaded_by) VALUES (?, ?, ?, ?, ?)');
+    stmt.run(file.filename, reportName, reportDate, vehicleData, req.session.user?.username || 'system');
+    const stmt2 = db.prepare('INSERT INTO uploaded_files (original_name, stored_name, report_name, uploaded_by) VALUES (?, ?, ?, ?)');
+    stmt2.run(file.originalname, file.filename, reportName, req.session.user?.username || 'system');
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/reports-list', (req, res) => {
+  try {
+    const reports = db.prepare('SELECT id, filename as reportName, report_name as reportName2, report_date as createdAt, data FROM expense_reports ORDER BY id DESC').all();
+    const formatted = reports.map(r => ({
+      id: r.id,
+      reportName: r.reportName2 || r.reportName,
+      data: JSON.parse(r.data || '[]'),
+      createdAt: r.createdAt
+    }));
+    res.json(formatted);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/uploaded-files', (req, res) => {
+  try {
+    const files = db.prepare('SELECT * FROM uploaded_files ORDER BY id DESC').all();
+    res.json(files);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/download-file/:id', (req, res) => {
+  try {
+    const file = db.prepare('SELECT stored_name, original_name FROM uploaded_files WHERE id = ?').get(req.params.id);
+    if (!file) return res.status(404).json({ error: 'ملف غير موجود' });
+    const filePath = path.join(__dirname, 'uploads', file.stored_name);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'الملف غير موجود على القرص' });
+    res.download(filePath, file.original_name);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+
+app.post('/api/upload-report', (req, res) => {
+  const { filename, report_name, reportName, report_date, data } = req.body;
+  try {
+    const name = report_name || reportName || filename || 'تقرير محفوظ';
+    const stmt = db.prepare('INSERT INTO expense_reports (filename, report_name, report_date, data, uploaded_by) VALUES (?, ?, ?, ?, ?)');
+    const info = stmt.run(filename || name, name, report_date || new Date().toISOString().slice(0, 10), data || '[]', req.session.user?.username || 'system');
+    res.json({ success: true, id: info.lastInsertRowid });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/reports/:id', (req, res) => {
+  try {
+    db.prepare('DELETE FROM expense_reports WHERE id = ?').run(req.params.id);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/truck-violations/:date', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM truck_violations WHERE report_date = ? ORDER BY truck_number').all(req.params.date);
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/truck-violations/save', (req, res) => {
+  const { date, violations } = req.body;
+  if (!date) return res.status(400).json({ error: 'التاريخ مطلوب' });
+  try {
+    const upsert = db.prepare(`
+      INSERT INTO truck_violations (report_date, truck_number, driver_name, trips_count, reason, details, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(report_date, truck_number) DO UPDATE SET
+        driver_name = excluded.driver_name,
+        trips_count = excluded.trips_count,
+        reason = excluded.reason,
+        details = excluded.details,
+        created_by = excluded.created_by,
+        created_at = CURRENT_TIMESTAMP
+    `);
+    const tx = db.transaction((items) => {
+      for (const v of items || []) {
+        upsert.run(date, v.truckNumber || v.truck_number || '', v.driver || v.driver_name || '', Number(v.trips || v.trips_count || 0), v.reason || '', v.detail || v.details || '', req.session.user?.username || 'system');
+      }
+    });
+    tx(violations || []);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/truck-violations/report/:start/:end', (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT report_date, truck_number, driver_name, trips_count, reason, details
+      FROM truck_violations
+      WHERE report_date BETWEEN ? AND ?
+      ORDER BY report_date DESC, truck_number
+    `).all(req.params.start, req.params.end);
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/truck-violations/stats/:start/:end', (req, res) => {
+  try {
+    const general = db.prepare(`
+      SELECT COUNT(*) AS total_violations,
+             COUNT(DISTINCT truck_number) AS total_trucks,
+             COALESCE(AVG(trips_count), 0) AS avg_trips
+      FROM truck_violations
+      WHERE report_date BETWEEN ? AND ?
+    `).get(req.params.start, req.params.end);
+    const topTrucks = db.prepare(`
+      SELECT truck_number, MAX(driver_name) AS driver_name, COUNT(*) AS violation_count, COALESCE(AVG(trips_count), 0) AS avg_trips
+      FROM truck_violations
+      WHERE report_date BETWEEN ? AND ?
+      GROUP BY truck_number
+      ORDER BY violation_count DESC, truck_number
+      LIMIT 10
+    `).all(req.params.start, req.params.end);
+    const topReasons = db.prepare(`
+      SELECT COALESCE(NULLIF(reason, ''), 'غير محدد') AS reason, COUNT(*) AS count
+      FROM truck_violations
+      WHERE report_date BETWEEN ? AND ?
+      GROUP BY COALESCE(NULLIF(reason, ''), 'غير محدد')
+      ORDER BY count DESC
+      LIMIT 10
+    `).all(req.params.start, req.params.end);
+    res.json({ general, topTrucks, topReasons });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/backup', (req, res) => {
+  try {
+    const settings = {
+      factories: db.prepare('SELECT * FROM factories ORDER BY id').all(),
+      materials: db.prepare('SELECT * FROM materials ORDER BY id').all(),
+      trucks: db.prepare('SELECT * FROM trucks ORDER BY id').all(),
+      drivers: db.prepare('SELECT * FROM drivers ORDER BY id').all()
+    };
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      settings,
+      restrictions: db.prepare('SELECT * FROM restrictions ORDER BY id').all(),
+      expenseReports: db.prepare('SELECT * FROM expense_reports ORDER BY id').all(),
+      uploadedFiles: db.prepare('SELECT * FROM uploaded_files ORDER BY id').all(),
+      truckViolations: db.prepare('SELECT * FROM truck_violations ORDER BY report_date, truck_number').all()
+    };
+    res.json(backup);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/restore', (req, res) => {
+  const data = req.body || {};
+  try {
+    const tx = db.transaction(() => {
+      if (data.settings) {
+        if (Array.isArray(data.settings.factories)) {
+          db.prepare('DELETE FROM factories').run();
+          const ins = db.prepare('INSERT INTO factories (name, is_active, distance_km, city) VALUES (?, ?, ?, ?)');
+          data.settings.factories.forEach(f => ins.run(f.name || String(f), f.is_active ?? 1, f.distance_km || 0, f.city || f.location || ''));
+        }
+        if (Array.isArray(data.settings.materials)) {
+          db.prepare('DELETE FROM materials').run();
+          const ins = db.prepare('INSERT INTO materials (name, is_active) VALUES (?, ?)');
+          data.settings.materials.forEach(m => ins.run(m.name || String(m), m.is_active ?? 1));
+        }
+        if (Array.isArray(data.settings.trucks)) {
+          db.prepare('DELETE FROM trucks').run();
+          const ins = db.prepare('INSERT INTO trucks (plate_number, model, status, driver_name) VALUES (?, ?, ?, ?)');
+          data.settings.trucks.forEach(t => ins.run(t.plate_number || t.number || String(t), t.model || '', t.status || 'available', t.driver_name || t.driver || ''));
+        }
+      }
+      if (Array.isArray(data.truckViolations)) {
+        db.prepare('DELETE FROM truck_violations').run();
+        const ins = db.prepare('INSERT OR REPLACE INTO truck_violations (report_date, truck_number, driver_name, trips_count, reason, details, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        data.truckViolations.forEach(v => ins.run(v.report_date, v.truck_number, v.driver_name || '', v.trips_count || 0, v.reason || '', v.details || '', v.created_by || 'restore'));
+      }
+    });
+    tx();
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/clear-all', (req, res) => {
+  try {
+    const tx = db.transaction(() => {
+      db.prepare('DELETE FROM assignments').run();
+      db.prepare('DELETE FROM orders').run();
+      db.prepare('DELETE FROM expense_reports').run();
+      db.prepare('DELETE FROM uploaded_files').run();
+      db.prepare('DELETE FROM truck_violations').run();
+      db.prepare('DELETE FROM restrictions').run();
+    });
+    tx();
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ======================
+// تشغيل الخادم
+// ======================
+
+// صفحات مضافة ديناميكياً من إدارة الصفحات.
+app.get('/:slug', requireAuth, (req, res, next) => {
+  try {
+    const requestPath = '/' + req.params.slug;
+    const page = db.prepare('SELECT * FROM pages WHERE path = ? AND is_active = 1 LIMIT 1').get(requestPath);
+    if (!page || page.is_system) return next();
+    if (!canAccessPage(req.session.user, requestPath)) return res.status(403).send('غير مصرح');
+    res.render('custom_page', {
+      title: page.title,
+      user: req.session.user,
+      currentPath: requestPath,
+      page
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.use((req, res) => {
+  res.status(404).render('not_found', {
+    title: '\u0627\u0644\u0635\u0641\u062d\u0629 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f\u0629',
+    user: req.session ? req.session.user : null,
+    currentPath: req.path
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
