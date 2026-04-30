@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كسارة الحبردي - آراء العملاء</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* تنسيقات إضافية لتوافق آراء العملاء مع التصميم الداكن */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        /* تنسيق النجوم */
+        .stars {
+            color: #f5b042;  /* لون ذهبي دافئ */
+            letter-spacing: 2px;
+            font-size: 1.1rem;
+        }
+        .stars .fa-star, .stars .fa-star-half-alt {
+            color: #f5b042;
+        }
+        .stars .far {
+            color: rgba(255,255,255,0.3);
+        }
+        .card h3 {
+            color: #f093fb;
+            margin-bottom: 0.25rem;
+        }
+        .card p {
+            color: #e0e7ff;
+            line-height: 1.6;
+        }
+        .card i.fa-user-circle {
+            color: #f093fb !important;
+        }
+        .note {
+            text-align: center;
+            margin-top: 2rem;
+            color: #cdd9ff;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <div class="header-container">
+            <div class="logo-area">
+                <div class="graphic-logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="65" height="65">
+                        <rect width="120" height="120" fill="#1a3f1a" rx="28"/>
+                        <path d="M25,75 L48,40 L70,60 L90,35 L105,55 L98,82 L25,82 Z" fill="#c9a03d" stroke="#e9c468" stroke-width="2"/>
+                        <rect x="42" y="68" width="58" height="22" rx="6" fill="#b87c2a"/>
+                        <rect x="46" y="60" width="36" height="12" rx="4" fill="#dfb45e"/>
+                        <circle cx="55" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/>
+                        <circle cx="85" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/>
+                        <circle cx="55" cy="90" r="3.5" fill="#aaa"/>
+                        <circle cx="85" cy="90" r="3.5" fill="#aaa"/>
+                        <text x="60" y="114" font-size="12" fill="#FFE3A4" text-anchor="middle" font-weight="800">زرعة الخير</text>
+                        <text x="60" y="27" font-size="9" fill="#FFD966" text-anchor="middle">النقليات</text>
+                    </svg>
+                </div>
+                <div class="company-title">
+                    <h1>شركة زرعة الخير للنقليات</h1>
+                    <p>🚛 كسارة الحبردي بطريق الصمان | منطقة الصمان - طريق الرياض الدمام</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="main-layout">
+        <div id="side-nav-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1>آراء العملاء</h1>
+                <p>ماذا يقول عملاؤنا عنا</p>
+            </div>
+            <div id="reviews-container" class="cards-grid"></div>
+            <p class="note">يتم جلب التقييمات مباشرة من قاعدة بيانات العملاء</p>
+        </main>
+    </div>
+    <footer>
+        <p>© 2025 شركة زرعة الخير للنقليات - كسارة الحبردي بطريق الصمان | جميع الحقوق محفوظة</p>
+    </footer>
+</div>
+<script>
+    const sampleReviews = [
+        { name: "أحمد محمد", rating: 5, text: "من أفضل الكسارات في المنطقة، جودة المنتج ممتازة والتسليم في الوقت المحدد." },
+        { name: "شركة الخليج للمقاولات", rating: 5, text: "نعتمد على كسارة الحبردي في جميع مشاريعنا، مواد عالية الجودة وأسعار منافسة." },
+        { name: "مؤسسة الصمان", rating: 4, text: "تعامل راقي وجودة ممتازة، نتمنى زيادة عدد الشاحنات لتسريع التوصيل." },
+        { name: "مقاولات الفتح", rating: 5, text: "تجربة ممتازة، فريق العمل متعاون والمنتجات مطابقة للمواصفات." }
+    ];
+    function displayReviews() {
+        const container = document.getElementById('reviews-container');
+        if(!container) return;
+        container.innerHTML = sampleReviews.map(review => {
+            // إنشاء تمثيل النجوم باستخدام Font Awesome
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                if (i <= review.rating) {
+                    starsHtml += '<i class="fas fa-star"></i>';
+                } else if (i - 0.5 === review.rating) {
+                    starsHtml += '<i class="fas fa-star-half-alt"></i>';
+                } else {
+                    starsHtml += '<i class="far fa-star"></i>';
+                }
+            }
+            return `
+                <div class="card">
+                    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem;">
+                        <i class="fas fa-user-circle" style="font-size:2.5rem; color:#f093fb;"></i>
+                        <div>
+                            <h3 style="margin:0;">${review.name}</h3>
+                            <div class="stars">${starsHtml}</div>
+                        </div>
+                    </div>
+                    <p>"${review.text}"</p>
+                </div>
+            `;
+        }).join('');
+    }
+    displayReviews();
+</script>
+<script src="load-nav.js"></script>
+</body>
+</html>

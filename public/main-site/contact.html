@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كسارة الحبردي - تواصل معنا</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* تنسيقات خاصة بصفحة التواصل مع التصميم الداكن */
+        .contact-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .contact-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(4px);
+            padding: 1.5rem;
+            border-radius: 28px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: 0.2s;
+        }
+        .contact-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-5px);
+            border-color: #667eea;
+        }
+        .contact-card i {
+            font-size: 2.5rem;
+            color: #f093fb;
+            margin-bottom: 0.5rem;
+        }
+        .contact-card h3 {
+            color: #f093fb;
+            margin-bottom: 0.5rem;
+        }
+        .contact-card p a {
+            color: #e0e7ff;
+            text-decoration: none;
+            transition: 0.2s;
+        }
+        .contact-card p a:hover {
+            color: #f093fb;
+        }
+        /* تنسيق العناوين الثانوية */
+        h2 {
+            color: #f093fb;
+            margin: 1.5rem 0 1rem;
+            border-right: 4px solid #f093fb;
+            padding-right: 15px;
+            font-weight: 700;
+        }
+        /* بطاقات الخريطة */
+        .maps-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .map-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(4px);
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: 0.2s;
+        }
+        .map-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #667eea;
+        }
+        .map-card h3 {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 0.7rem;
+            margin: 0;
+            text-align: center;
+            font-weight: 700;
+        }
+        .map-card iframe {
+            width: 100%;
+            height: 200px;
+            border: none;
+        }
+        .map-address {
+            padding: 0.7rem;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            color: #cdd9ff;
+        }
+        .map-link {
+            display: inline-block;
+            background: #11998e;
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.7rem;
+            transition: 0.2s;
+        }
+        .map-link:hover {
+            background: #0e7a6e;
+            transform: scale(1.02);
+        }
+        /* نموذج الاتصال */
+        #contactForm {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(4px);
+            padding: 1.8rem;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 1rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: #f093fb;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 40px;
+            font-family: inherit;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: 0.2s;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #f093fb;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+        #contactForm button {
+            background: linear-gradient(135deg, #11998e, #0e7a6e);
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            border-radius: 40px;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 1rem;
+        }
+        #contactForm button:hover {
+            background: #0e7a6e;
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
+        }
+        /* تعديل ألوان الروابط في النموذج إن وجدت */
+        select option {
+            background: #1a1a2e;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <div class="header-container">
+            <div class="logo-area">
+                <div class="graphic-logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="65" height="65">
+                        <rect width="120" height="120" fill="#1a3f1a" rx="28"/>
+                        <path d="M25,75 L48,40 L70,60 L90,35 L105,55 L98,82 L25,82 Z" fill="#c9a03d" stroke="#e9c468" stroke-width="2"/>
+                        <rect x="42" y="68" width="58" height="22" rx="6" fill="#b87c2a"/>
+                        <rect x="46" y="60" width="36" height="12" rx="4" fill="#dfb45e"/>
+                        <circle cx="55" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/>
+                        <circle cx="85" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/>
+                        <circle cx="55" cy="90" r="3.5" fill="#aaa"/>
+                        <circle cx="85" cy="90" r="3.5" fill="#aaa"/>
+                        <text x="60" y="114" font-size="12" fill="#FFE3A4" text-anchor="middle" font-weight="800">زرعة الخير</text>
+                        <text x="60" y="27" font-size="9" fill="#FFD966" text-anchor="middle">النقليات</text>
+                    </svg>
+                </div>
+                <div class="company-title">
+                    <h1>شركة زرعة الخير للنقليات</h1>
+                    <p>🚛 كسارة الحبردي بطريق الصمان | منطقة الصمان - طريق الرياض الدمام</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="main-layout">
+        <div id="side-nav-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1>تواصل معنا</h1>
+                <p>نحن هنا لخدمتك على مدار الساعة</p>
+            </div>
+            <div class="contact-info">
+                <div class="contact-card">
+                    <i class="fab fa-whatsapp"></i>
+                    <h3>واتساب</h3>
+                    <p><a href="https://wa.me/966579242467">0579242467</a></p>
+                </div>
+                <div class="contact-card">
+                    <i class="fas fa-phone-alt"></i>
+                    <h3>هاتف أرضي</h3>
+                    <p><a href="tel:0581608219">0581608219</a></p>
+                </div>
+                <div class="contact-card">
+                    <i class="fas fa-envelope"></i>
+                    <h3>البريد الإلكتروني</h3>
+                    <p><a href="mailto:info@alhabardi.com">info@alhabardi.com</a></p>
+                </div>
+            </div>
+            <h2><i class="fas fa-map-marker-alt"></i> مواقعنا</h2>
+            <div class="maps-container">
+                <div class="map-card">
+                    <h3><i class="fas fa-building"></i> المكتب الرئيسي للمبيعات</h3>
+                    <iframe src="https://maps.google.com/maps?q=24.835504581893563,46.681337118947845&z=15&output=embed" allowfullscreen loading="lazy"></iframe>
+                    <div class="map-address">
+                        <p><i class="fas fa-map-marker-alt"></i> طريق الملك فهد، الرياض</p>
+                        <a href="https://www.google.com/maps?q=24.835504581893563,46.681337118947845" target="_blank" class="map-link">فتح في خرائط جوجل</a>
+                    </div>
+                </div>
+                <div class="map-card">
+                    <h3><i class="fas fa-industry"></i> موقع الكسارة - الصمان</h3>
+                    <iframe src="https://maps.google.com/maps?q=25.605038392320793,48.3272681711642&z=15&output=embed" allowfullscreen loading="lazy"></iframe>
+                    <div class="map-address">
+                        <p><i class="fas fa-map-marker-alt"></i> طريق الرياض - الدمام، منطقة الصمان</p>
+                        <a href="https://www.google.com/maps?q=25.605038392320793,48.3272681711642" target="_blank" class="map-link">فتح في خرائط جوجل</a>
+                    </div>
+                </div>
+            </div>
+            <h2><i class="fas fa-pen-alt"></i> طلب عام أو طلب عرض سعر</h2>
+            <form id="contactForm">
+                <div class="form-group">
+                    <label>الاسم الكامل</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label>رقم الجوال</label>
+                    <input type="tel" id="phone" required>
+                </div>
+                <div class="form-group">
+                    <label>البريد الإلكتروني</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label>نوع الطلب</label>
+                    <select id="requestType">
+                        <option>طلب عرض سعر</option>
+                        <option>استفسار عام</option>
+                        <option>طلب عينة منتج</option>
+                        <option>طلب زيارة ميدانية</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الرسالة</label>
+                    <textarea id="message" rows="5" required></textarea>
+                </div>
+                <button type="submit">إرسال الطلب</button>
+            </form>
+        </main>
+    </div>
+    <footer>
+        <p>© 2025 شركة زرعة الخير للنقليات - كسارة الحبردي بطريق الصمان | جميع الحقوق محفوظة</p>
+    </footer>
+</div>
+<script>
+    document.getElementById('contactForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        alert('تم إرسال طلبك بنجاح، سيتم التواصل معك قريبًا.');
+        this.reset();
+    });
+</script>
+<script src="load-nav.js"></script>
+</body>
+</html>

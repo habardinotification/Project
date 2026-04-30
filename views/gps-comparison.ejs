@@ -1,0 +1,635 @@
+<style>
+  /* إزالة السلايد بار وجعل الصفحة تعرض كل المحتوى */
+  * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  *::-webkit-scrollbar {
+    display: none !important;
+  }
+  .main {
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+  }
+  body {
+    overflow-x: visible !important;
+  }
+  /* تنسيق المربعات */
+  .section-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .stat-box {
+    background: linear-gradient(135deg, var(--primary-bg) 0%, var(--bg-card) 100%);
+    border-radius: 16px;
+    padding: 0.8rem;
+    text-align: center;
+    border: 1px solid var(--border-color);
+  }
+  .stat-box h3 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: var(--primary);
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-card);
+    border-radius: 12px;
+    overflow: auto;
+  }
+  .data-table th, .data-table td {
+    padding: 0.6rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .data-table th {
+    background: var(--primary-bg);
+    font-weight: bold;
+  }
+  .btn-group {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+  }
+  .btn {
+    padding: 0.5rem 1.2rem;
+    border-radius: 2rem;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-success { background: #10b981; color: white; }
+  .btn-warning { background: #f59e0b; color: white; }
+  .filter-bar {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.8rem;
+    background: var(--bg-card);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+  }
+  .upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 16px;
+    padding: 0.8rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    background: var(--bg-card);
+  }
+  .tab-btn {
+    padding: 0.4rem 1rem;
+    border-radius: 2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+</style>
+
+<div class="page-header">
+  <h1>📍 داشبورد تحليلي - مقارنة المسافات والاستهلاك</h1>
+  <p>مقارنة بين المسافات المقدرة (حسب المصانع) والمسافات الفعلية من GPS</p>
+</div>
+
+<div class="filter-bar">
+  <div style="display: flex; align-items: center; gap: 0.5rem;">
+    <label style="font-weight: bold;">📅 تاريخ التوزيعات:</label>
+    <input type="date" id="reportDate" style="padding: 0.4rem 0.8rem; border-radius: 2rem; border: 1px solid var(--border-color); background: var(--bg-input);">
+  </div>
+  <button id="loadDashboardBtn" class="btn btn-primary">📊 تحميل التوزيعات</button>
+</div>
+
+<!-- رفع الملف -->
+<div id="uploadArea" class="upload-area">
+  <i class="fas fa-cloud-upload-alt" style="font-size: 1.8rem; color: var(--primary);"></i>
+  <p style="margin: 0.3rem 0 0;">📂 اضغط لرفع ملف GPS (Excel/CSV)</p>
+  <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">يجب أن يحتوي الملف على عمود Vehicle والأيام 1-31</p>
+  <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" style="display: none;">
+</div>
+
+<div id="fileStatus" style="font-size: 0.85rem; margin-bottom: 0.5rem;"></div>
+<div id="loading" style="display: none; text-align: center; padding: 0.5rem;"><span>⏳ جاري معالجة الملف...</span></div>
+
+<!-- اختيار اليوم -->
+<div id="daySelection" style="display: none; margin-bottom: 1rem;">
+  <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 0.8rem; background: var(--bg-sidebar); border-radius: 16px;">
+    <label style="font-weight: bold;">📅 اختر اليوم:</label>
+    <select id="daySelect" style="padding: 0.4rem 0.8rem; border-radius: 2rem; border: 1px solid var(--border-color); background: var(--bg-input); min-width: 120px;">
+      <option value="">-- اختر اليوم --</option>
+    </select>
+    <input type="text" id="daySearch" placeholder="🔍 بحث" style="padding: 0.4rem 0.8rem; border-radius: 2rem; border: 1px solid var(--border-color); width: 100px;">
+    <div id="quickDays" style="display: flex; gap: 0.3rem; flex-wrap: wrap;"></div>
+  </div>
+</div>
+
+<!-- أزرار التحليل والتصدير -->
+<div id="analysisControls" style="display: none;">
+  <div class="btn-group">
+    <button id="analyzeBtn" class="btn btn-primary">🔍 تحليل</button>
+    <button id="saveReportBtn" class="btn btn-success" disabled>💾 حفظ</button>
+    <button id="exportExcelBtn" class="btn btn-warning" disabled>📥 تصدير Excel ملون</button>
+  </div>
+</div>
+
+<!-- الإحصائيات السريعة -->
+<div id="statsContainer" style="display: none;">
+  <div class="stats-grid">
+    <div class="stat-box"><h3 id="totalVehicles">0</h3><div>🚛 السيارات المتحركة</div></div>
+    <div class="stat-box"><h3 id="totalDashboardKm">0</h3><div>📊 المسافة المقدرة (كم)</div></div>
+    <div class="stat-box"><h3 id="totalGpsKm">0</h3><div>🛰️ المسافة الفعلية (كم)</div></div>
+    <div class="stat-box"><h3 id="totalWastedDiesel">0</h3><div>💸 الديزل المهدور (لتر)</div></div>
+  </div>
+</div>
+
+<!-- التبويبات -->
+<div id="tabsContainer" style="display: none;">
+  <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+    <button class="tab-btn active" data-tab="detailed">📋 السيارات التي تحركت</button>
+    <button class="tab-btn" data-tab="notMoved">🚫 سيارات لم تتحرك</button>
+    <button class="tab-btn" data-tab="exceed">⚠️ السيارات المتجاوزة</button>
+  </div>
+
+  <div id="detailedTab">
+    <div style="overflow-x: auto;">
+      <table class="data-table">
+        <thead>
+          <tr><th>#</th><th>رقم السيارة</th><th>معدل الاستهلاك</th><th>المسافة المقدرة</th><th>المسافة الفعلية</th><th>الفرق</th><th>ديزل متوقع</th><th>ديزل فعلي</th><th>الهدر</th><th>نسبة الهدر</th><th>الحالة</th></tr>
+        </thead>
+        <tbody id="detailedBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="notMovedTab" style="display: none;">
+    <div style="overflow-x: auto;">
+      <table class="data-table">
+        <thead><tr><th>#</th><th>رقم السيارة</th><th>ملاحظات</th></tr></thead>
+        <tbody id="notMovedBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="exceedTab" style="display: none;">
+    <div style="overflow-x: auto;">
+      <table class="data-table">
+        <thead><tr><th>#</th><th>رقم السيارة</th><th>فرق المسافة</th><th>هدر الديزل</th><th>نسبة الهدر</th></tr></thead>
+        <tbody id="exceedBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script>
+(function() {
+  let gpsData = {};
+  let currentDay = null;
+  let dashboardData = {};
+  let fuelEfficiency = {};
+  let analysisResult = [];
+  let allAnalysisResult = [];
+  let notMovedResult = [];
+  let currentDate = '';
+
+  const API_BASE = '/api';
+
+  async function loadFuelEfficiency() {
+    try {
+      const res = await fetch(`${API_BASE}/fleet/fuel-efficiency`, { credentials: 'include' });
+      if (res.ok) fuelEfficiency = await res.json();
+    } catch(e) { console.error(e); }
+  }
+
+  function getFactoryDistance(factoryName) {
+    const distances = {
+      "مصنع الفهد": 337.99, "مصنع قوة معمارية": 339.87, "مصنع سارمكس النظيم": 352.64,
+      "مصنع القيشان 3": 396.22, "مصنع القيشان 1": 396.22, "شركة الحارث للمنتجات الاسمنيه": 401.37,
+      "شركة برينسا للخرسانة الجاهزه": 403.21, "مصنع الاحجار الشرقية": 416.11, "شركة ابتك للخرسانة الجاهزه": 418.11,
+      "شركةالحارث للمنتجات الاسمنتية": 420.4, "مصنع باسل أبو الرب وشريكه": 420.6, "شركة عبر الخليج": 427.48,
+      "مصنع المعجل": 431.01, "مصنع نبراس2": 439.61, "مصنع دعم وحلول الدرعية": 441.05, "مصنع نبراس الخليج": 448.99,
+      "الحارث العزيزية": 475.49, "انشاءات دبي": 522.92, "الشركة الصينية": 605.51, "شركة اعمار": 662.14
+    };
+    return distances[factoryName] || 150;
+  }
+
+  function cleanNumber(str) {
+    if (!str) return '';
+    return String(str).replace(/[^\d]/g, '');
+  }
+
+  function showToast(msg, type) {
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:8px 16px;border-radius:8px;z-index:10000;background:' + (type === 'success' ? '#10b981' : '#ef4444') + ';color:white;font-size:0.85rem;';
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  async function loadDashboardDistributions() {
+    currentDate = document.getElementById('reportDate').value;
+    if (!currentDate) { showToast('❌ اختر التاريخ', 'error'); return; }
+
+    try {
+      const dayRes = await fetch(`${API_BASE}/day/${currentDate}`, { credentials: 'include' });
+      if (!dayRes.ok) throw new Error();
+      const dayData = await dayRes.json();
+      const distribution = dayData.distribution || [];
+      
+      if (distribution.length === 0) { showToast('⚠️ لا توجد توزيعات', 'error'); dashboardData = {}; return; }
+
+      dashboardData = {};
+      distribution.forEach(d => {
+        if (d.truck && d.truck.number) {
+          const truckNum = cleanNumber(d.truck.number);
+          const distance = getFactoryDistance(d.factory);
+          if (!dashboardData[truckNum]) dashboardData[truckNum] = 0;
+          dashboardData[truckNum] += distance;
+        }
+      });
+      showToast(`✅ تم تحميل ${Object.keys(dashboardData).length} سيارة`, 'success');
+      if (Object.keys(gpsData).length > 0 && currentDay) performAnalysis();
+    } catch(e) { showToast('❌ خطأ', 'error'); }
+  }
+
+  function processFileData(dataRows) {
+    if (!dataRows || dataRows.length === 0) return;
+    
+    let headerRowIndex = -1;
+    for (let i = 0; i < Math.min(dataRows.length, 30); i++) {
+      const firstCell = dataRows[i] && dataRows[i][0] ? String(dataRows[i][0]).toLowerCase().trim() : '';
+      if (firstCell === 'vehicle') { headerRowIndex = i; break; }
+    }
+    if (headerRowIndex === -1) { showToast('❌ لم نجد عمود Vehicle', 'error'); return; }
+    
+    const headers = dataRows[headerRowIndex];
+    const dayColumns = [];
+    for (let i = 0; i < headers.length; i++) {
+      const val = headers[i] ? String(headers[i]).trim() : '';
+      if (val && !isNaN(parseInt(val)) && val.toLowerCase() !== 'vehicle') {
+        dayColumns.push({ index: i, day: parseInt(val) });
+      }
+    }
+    
+    const availableDays = dayColumns.map(d => d.day).sort((a,b) => a-b);
+    
+    const tempGpsData = {};
+    dayColumns.forEach(col => { tempGpsData[col.day] = {}; });
+    
+    for (let r = headerRowIndex + 1; r < dataRows.length; r++) {
+      const row = dataRows[r];
+      if (!row || row.length === 0) continue;
+      const vehicleRaw = row[0] ? String(row[0]).trim() : '';
+      if (!vehicleRaw) continue;
+      const truckNum = cleanNumber(vehicleRaw);
+      if (!truckNum) continue;
+      
+      dayColumns.forEach(col => {
+        let distance = parseFloat(row[col.index]);
+        if (isNaN(distance)) distance = 0;
+        if (distance > 0) tempGpsData[col.day][truckNum] = (tempGpsData[col.day][truckNum] || 0) + distance;
+      });
+    }
+    
+    gpsData = tempGpsData;
+    
+    const daySelect = document.getElementById('daySelect');
+    daySelect.innerHTML = '<option value="">-- اختر --</option>';
+    availableDays.forEach(day => { daySelect.innerHTML += `<option value="${day}">اليوم ${day}</option>`; });
+    
+    const quickDiv = document.getElementById('quickDays');
+    quickDiv.innerHTML = availableDays.slice(0, 10).map(day => `<button class="quickDayBtn" data-day="${day}" style="padding:0.2rem 0.5rem; border-radius:1rem; border:1px solid var(--border-color); background:var(--bg-card); cursor:pointer; font-size:0.7rem;">${day}</button>`).join('');
+    
+    document.querySelectorAll('.quickDayBtn').forEach(btn => {
+      btn.onclick = () => {
+        currentDay = parseInt(btn.dataset.day);
+        document.getElementById('daySelect').value = currentDay;
+        document.getElementById('daySearch').value = currentDay;
+        showToast(`✅ اليوم ${currentDay}`, 'success');
+        if (Object.keys(dashboardData).length > 0) performAnalysis();
+      };
+    });
+    
+    const daySearch = document.getElementById('daySearch');
+    daySearch.oninput = () => {
+      const val = daySearch.value;
+      const options = daySelect.options;
+      for (let i = 0; i < options.length; i++) {
+        if (options[i].text.includes(val)) { daySelect.selectedIndex = i; break; }
+      }
+    };
+    
+    daySelect.onchange = () => {
+      const val = daySelect.value;
+      if (val) {
+        currentDay = parseInt(val);
+        showToast(`✅ اليوم ${currentDay}`, 'success');
+        if (Object.keys(dashboardData).length > 0) performAnalysis();
+      }
+    };
+    
+    document.getElementById('daySelection').style.display = 'block';
+    document.getElementById('fileStatus').innerHTML = `<span style="color:green;">✅ تم رفع الملف (${availableDays.length} يوم)</span>`;
+    showToast('✅ تم رفع الملف', 'success');
+    
+    const today = new Date().getDate();
+    if (availableDays.includes(today)) {
+      currentDay = today;
+      document.getElementById('daySelect').value = today;
+      document.getElementById('daySearch').value = today;
+      if (Object.keys(dashboardData).length > 0) performAnalysis();
+    }
+  }
+
+  function readExcelFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array', cellNF: false, cellFormula: false });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        processFileData(rows);
+      } catch(err) { showToast('❌ خطأ في القراءة', 'error'); }
+      document.getElementById('loading').style.display = 'none';
+    };
+    reader.onerror = () => { showToast('❌ خطأ', 'error'); document.getElementById('loading').style.display = 'none'; };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function readCSVFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target.result;
+        const lines = text.split('\n');
+        const rows = lines.map(line => line.split(',').map(cell => cell.trim().replace(/^"|"$/g, '')));
+        processFileData(rows);
+      } catch(err) { showToast('❌ خطأ', 'error'); }
+      document.getElementById('loading').style.display = 'none';
+    };
+    reader.onerror = () => { showToast('❌ خطأ', 'error'); document.getElementById('loading').style.display = 'none'; };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  function performAnalysis() {
+    if (Object.keys(gpsData).length === 0) { showToast('❌ ارفع ملف GPS أولاً', 'error'); return; }
+    if (!currentDay) { showToast('❌ اختر اليوم', 'error'); return; }
+    if (Object.keys(dashboardData).length === 0) { showToast('❌ حمل التوزيعات أولاً', 'error'); return; }
+
+    try {
+      const gpsMap = gpsData[currentDay] || {};
+      const allTrucks = new Set([...Object.keys(dashboardData), ...Object.keys(gpsMap)]);
+      allAnalysisResult = [];
+      notMovedResult = [];
+
+      for (const truck of allTrucks) {
+        const efficiency = fuelEfficiency[truck] || 3.2;
+        const dashboardKm = dashboardData[truck] || 0;
+        const gpsKm = gpsMap[truck] || 0;
+        const diffKm = gpsKm - dashboardKm;
+        const expectedDiesel = dashboardKm / efficiency;
+        const actualDiesel = gpsKm / efficiency;
+        const wastedDiesel = actualDiesel - expectedDiesel;
+        const wastePercent = expectedDiesel > 0 ? (wastedDiesel / expectedDiesel) * 100 : 0;
+        let status = diffKm > 10 ? 'متجاوز' : (diffKm > 5 ? 'تنبيه' : 'طبيعي');
+        
+        allAnalysisResult.push({
+          truck, efficiency: +efficiency.toFixed(2), dashboardKm: +dashboardKm.toFixed(2), gpsKm: +gpsKm.toFixed(2),
+          diffKm: +diffKm.toFixed(2), expectedDiesel: +expectedDiesel.toFixed(2), actualDiesel: +actualDiesel.toFixed(2),
+          wastedDiesel: +wastedDiesel.toFixed(2), wastePercent: +wastePercent.toFixed(1), status
+        });
+        if (dashboardKm === 0) notMovedResult.push({ truck });
+      }
+      
+      analysisResult = allAnalysisResult.filter(r => r.dashboardKm > 0);
+      analysisResult.sort((a, b) => b.diffKm - a.diffKm);
+      updateUI();
+      
+      document.getElementById('statsContainer').style.display = 'block';
+      document.getElementById('tabsContainer').style.display = 'block';
+      document.getElementById('analysisControls').style.display = 'block';
+      document.getElementById('saveReportBtn').disabled = false;
+      document.getElementById('exportExcelBtn').disabled = false;
+      showToast(`✅ ${analysisResult.length} تحركت، ${notMovedResult.length} لم تتحرك`, 'success');
+    } catch(e) { showToast('❌ خطأ', 'error'); }
+  }
+
+  function updateUI() {
+    const totalDashboard = analysisResult.reduce((s, r) => s + r.dashboardKm, 0);
+    const totalGps = analysisResult.reduce((s, r) => s + r.gpsKm, 0);
+    const totalWasted = analysisResult.reduce((s, r) => s + r.wastedDiesel, 0);
+    
+    document.getElementById('totalVehicles').textContent = analysisResult.length;
+    document.getElementById('totalDashboardKm').textContent = totalDashboard.toFixed(1);
+    document.getElementById('totalGpsKm').textContent = totalGps.toFixed(1);
+    document.getElementById('totalWastedDiesel').textContent = totalWasted.toFixed(1);
+    
+    const detailedBody = document.getElementById('detailedBody');
+    detailedBody.innerHTML = analysisResult.map((r, i) => `
+      <tr style="${r.diffKm > 10 ? 'background:#fee2e2' : (r.diffKm > 5 ? 'background:#fef3c7' : '')}">
+        <td>${i+1}</td><td>${r.truck}</td><td>${r.efficiency}</td>
+        <td>${r.dashboardKm}</td><td>${r.gpsKm}</td>
+        <td style="color:${r.diffKm > 0 ? '#dc2626' : '#10b981'}">${r.diffKm > 0 ? '+' + r.diffKm : r.diffKm}</td>
+        <td>${r.expectedDiesel}</td><td>${r.actualDiesel}</td>
+        <td style="color:${r.wastedDiesel > 0 ? '#dc2626' : '#10b981'}">${r.wastedDiesel}</td>
+        <td>${r.wastePercent}%</td><td>${r.status}</td>
+      </tr>
+    `).join('');
+    
+    const notMovedBody = document.getElementById('notMovedBody');
+    notMovedBody.innerHTML = notMovedResult.map((r, i) => `
+      <tr style="background:#fef3c7">
+        <td>${i+1}</td><td>${r.truck}</td><td>⚠️ لم يتم توزيع أي رحلة</td>
+      </tr>
+    `).join('');
+    if (!notMovedResult.length) notMovedBody.innerHTML = '<tr><td colspan="3" style="background:#dcfce7;text-align:center;">✅ جميع السيارات تحركت</td></tr>';
+    
+    const exceedList = analysisResult.filter(r => r.diffKm > 10);
+    const exceedBody = document.getElementById('exceedBody');
+    exceedBody.innerHTML = exceedList.map((r, i) => `
+      <tr style="background:#fee2e2">
+        <td>${i+1}</td><td>${r.truck}</td><td>${r.diffKm} كم</td><td>${r.wastedDiesel} لتر</td><td>${r.wastePercent}%</td>
+      </tr>
+    `).join('');
+    if (!exceedList.length) exceedBody.innerHTML = '<tr><td colspan="5" style="background:#dcfce7;text-align:center;">✅ لا توجد سيارات متجاوزة</td></tr>';
+  }
+
+  // دالة التصدير الملونة (تستخدم HTML لإنشاء Excel ملون)
+  function exportToExcel() {
+    if (!allAnalysisResult.length) { showToast('❌ لا توجد بيانات', 'error'); return; }
+    
+    try {
+      const totalMoved = analysisResult.length;
+      const totalNotMoved = notMovedResult.length;
+      const totalVehicles = totalMoved + totalNotMoved;
+      const totalDashboard = analysisResult.reduce((s, r) => s + r.dashboardKm, 0);
+      const totalGps = analysisResult.reduce((s, r) => s + r.gpsKm, 0);
+      const totalWasted = analysisResult.reduce((s, r) => s + r.wastedDiesel, 0);
+      const exceedCount = analysisResult.filter(r => r.diffKm > 10).length;
+      const complianceRate = totalMoved > 0 ? ((totalMoved - exceedCount) / totalMoved * 100).toFixed(1) : 0;
+      
+      // إنشاء HTML للتقرير الملون
+      let htmlContent = `
+        <html dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <title>تقرير تحليلي - ${currentDate}</title>
+          <style>
+            * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+            body { padding: 20px; background: #f5f5f5; }
+            .header { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; text-align: center; }
+            .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+            .card { background: white; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            .card h2 { margin: 0; font-size: 28px; color: #2563eb; }
+            .card p { margin: 5px 0 0; color: #666; }
+            .section { background: white; border-radius: 12px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            .section-title { background: linear-gradient(135deg, #2563eb, #3b82f6); color: white; padding: 10px 15px; font-size: 18px; font-weight: bold; }
+            table { width: 100%; border-collapse: collapse; }
+            th { background: #f0f9ff; padding: 10px; text-align: center; border-bottom: 2px solid #2563eb; }
+            td { padding: 8px; text-align: center; border-bottom: 1px solid #e5e7eb; }
+            .exceed { background: #fee2e2 !important; color: #dc2626; }
+            .warning { background: #fef3c7 !important; color: #d97706; }
+            .good { background: #dcfce7 !important; color: #10b981; }
+            .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+            .badge-red { background: #dc2626; color: white; }
+            .badge-orange { background: #f59e0b; color: white; }
+            .badge-green { background: #10b981; color: white; }
+            .footer { text-align: center; padding: 15px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>📊 التقرير التحليلي المفصل</h1>
+            <p>التاريخ: ${currentDate} | اليوم المختار: ${currentDay}</p>
+          </div>
+          
+          <div class="dashboard">
+            <div class="card"><h2>${totalVehicles}</h2><p>🚛 إجمالي السيارات</p></div>
+            <div class="card"><h2>${totalMoved}</h2><p>✅ السيارات التي تحركت</p></div>
+            <div class="card"><h2>${totalNotMoved}</h2><p>🚫 السيارات الخاملة</p></div>
+            <div class="card"><h2>${totalDashboard.toFixed(1)}</h2><p>📊 إجمالي المسافة المقدرة (كم)</p></div>
+            <div class="card"><h2>${totalGps.toFixed(1)}</h2><p>🛰️ إجمالي المسافة الفعلية (كم)</p></div>
+            <div class="card"><h2>${totalWasted.toFixed(1)}</h2><p>💸 إجمالي الديزل المهدور (لتر)</p></div>
+            <div class="card"><h2>${exceedCount}</h2><p>⚠️ السيارات المتجاوزة</p></div>
+            <div class="card"><h2>${complianceRate}%</h2><p>📈 نسبة الالتزام</p></div>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">✅ السيارات التي تحركت</div>
+            <table>
+              <thead><tr><th>#</th><th>رقم السيارة</th><th>معدل الاستهلاك</th><th>المسافة المقدرة</th><th>المسافة الفعلية</th><th>الفرق</th><th>ديزل متوقع</th><th>ديزل فعلي</th><th>الهدر</th><th>نسبة الهدر</th><th>الحالة</th></tr></thead>
+              <tbody>
+                ${analysisResult.map((r, i) => `
+                  <tr class="${r.diffKm > 10 ? 'exceed' : (r.diffKm > 5 ? 'warning' : 'good')}">
+                    <td>${i+1}</td><td>${r.truck}</td><td>${r.efficiency}</td>
+                    <td>${r.dashboardKm}</td><td>${r.gpsKm}</td>
+                    <td>${r.diffKm > 0 ? '+' + r.diffKm : r.diffKm}</td>
+                    <td>${r.expectedDiesel}</td><td>${r.actualDiesel}</td>
+                    <td>${r.wastedDiesel}</td><td>${r.wastePercent}%</td>
+                    <td>${r.status}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">🚫 السيارات التي لم تتحرك</div>
+            <table>
+              <thead><tr><th>#</th><th>رقم السيارة</th><th>الحالة</th></tr></thead>
+              <tbody>
+                ${notMovedResult.length > 0 ? notMovedResult.map((r, i) => `
+                  <tr><td>${i+1}</td><td>${r.truck}</td><td>⚠️ لم يتم توزيع أي رحلة</td></tr>
+                `).join('') : '<tr><td colspan="3" style="text-align:center">✅ جميع السيارات تحركت</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">⚠️ السيارات المتجاوزة (فرق > 10 كم)</div>
+            <table>
+              <thead><tr><th>#</th><th>رقم السيارة</th><th>فرق المسافة</th><th>هدر الديزل</th><th>نسبة الهدر</th></tr></thead>
+              <tbody>
+                ${analysisResult.filter(r => r.diffKm > 10).map((r, i) => `
+                  <tr class="exceed"><td>${i+1}</td><td>${r.truck}</td><td>${r.diffKm} كم</td><td>${r.wastedDiesel} لتر</td><td>${r.wastePercent}%</td></tr>
+                `).join('') || '<tr><td colspan="5" style="text-align:center">✅ لا توجد سيارات متجاوزة</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="footer">
+            <p>تم التصدير من نظام زرعة الخير للنقليات | ${new Date().toLocaleString('ar-SA')}</p>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // تحويل HTML إلى Blob وتحميله
+      const blob = new Blob([htmlContent], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      // استخدام .xls بدلاً من .xlsx للتأكد من أن الألوان تظهر
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `تقرير_تحليلي_${currentDate}_اليوم_${currentDay}.xls`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      showToast('✅ تم تصدير التقرير الملون بنجاح', 'success');
+    } catch(e) {
+      console.error(e);
+      showToast('❌ خطأ في التصدير: ' + e.message, 'error');
+    }
+  }
+
+  function saveToDatabase() {
+    showToast('✅ تم حفظ البيانات محلياً', 'success');
+    localStorage.setItem('analysisData', JSON.stringify({ date: currentDate, day: currentDay, analysis: analysisResult }));
+  }
+
+  // ربط الأحداث
+  document.getElementById('uploadArea').onclick = () => document.getElementById('excelFile').click();
+  document.getElementById('excelFile').onchange = (e) => { if (e.target.files[0]) { document.getElementById('loading').style.display = 'block'; const file = e.target.files[0]; file.name.toLowerCase().endsWith('.csv') ? readCSVFile(file) : readExcelFile(file); } };
+  document.getElementById('loadDashboardBtn').onclick = loadDashboardDistributions;
+  document.getElementById('analyzeBtn').onclick = performAnalysis;
+  document.getElementById('saveReportBtn').onclick = saveToDatabase;
+  document.getElementById('exportExcelBtn').onclick = exportToExcel;
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.getElementById('detailedTab').style.display = tab === 'detailed' ? 'block' : 'none';
+      document.getElementById('notMovedTab').style.display = tab === 'notMoved' ? 'block' : 'none';
+      document.getElementById('exceedTab').style.display = tab === 'exceed' ? 'block' : 'none';
+    };
+  });
+
+  loadFuelEfficiency();
+})();
+</script>

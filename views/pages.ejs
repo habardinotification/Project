@@ -1,0 +1,36 @@
+<section class="card">
+  <div class="section-head"><h2>إضافة صفحة جديدة</h2><span class="pill">تظهر تلقائياً في الـSidebar</span></div>
+  <form method="post" action="/pages" class="form-grid">
+    <label>عنوان الصفحة<input name="title" required placeholder="مثال: متابعة الديزل"></label>
+    <label>رابط مختصر slug<input name="slug" required placeholder="diesel-followup"></label>
+    <label>أيقونة<input name="icon" value="📄"></label>
+    <label>الترتيب<input type="number" name="sort_order" value="200"></label>
+    <label class="wide">محتوى الصفحة HTML<textarea name="content_html" rows="5" placeholder="اكتب محتوى الصفحة هنا، ويمكن تطويرها لاحقاً بكود خاص."></textarea></label>
+    <button class="btn primary">إضافة الصفحة</button>
+  </form>
+</section>
+
+<section class="card mt">
+  <div class="section-head"><h2>الصفحات الحالية</h2><span class="pill"><%= pagesList.length %></span></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>العنوان</th><th>الرابط</th><th>أيقونة</th><th>ترتيب</th><th>نشطة</th><th>محتوى</th><th>إجراء</th></tr></thead>
+      <tbody>
+      <% pagesList.forEach(p => { %>
+        <tr>
+          <form method="post" action="/pages/<%= p.id %>">
+            <td><input name="title" value="<%= p.title %>"><small><%= p.is_system ? 'صفحة أساسية' : 'صفحة مضافة' %></small></td>
+            <td><a href="<%= p.path %>"><%= p.path %></a></td>
+            <td><input name="icon" value="<%= p.icon %>"></td>
+            <td><input type="number" name="sort_order" value="<%= p.sort_order %>"></td>
+            <td><input type="checkbox" name="is_active" <%= p.is_active?'checked':'' %>></td>
+            <td><textarea name="content_html" rows="2"><%= p.content_html || '' %></textarea></td>
+            <td class="actions"><button class="btn small soft">حفظ</button>
+          </form>
+          <% if (!p.is_system) { %><form method="post" action="/pages/<%= p.id %>?_method=DELETE"><button class="icon-danger">حذف</button></form><% } %></td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>

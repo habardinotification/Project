@@ -1,0 +1,366 @@
+<!-- views/trucks-failed-report.ejs -->
+<style>
+  /* أنماط إضافية خاصة بهذه الصفحة فقط – متوافقة مع نظام CSS */
+  .date-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .date-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .date-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+  }
+  .quick-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+  .quick-filter-btn {
+    padding: 0.3rem 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 40px;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .quick-filter-btn.active, .quick-filter-btn:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-card .number {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--primary);
+  }
+  .small-note {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+  .badge-danger {
+    background: var(--danger);
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 40px;
+  }
+  .executive-box {
+    background: var(--bg-sidebar);
+    border-right: 4px solid var(--success);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .executive-box h3 {
+    color: var(--success);
+    margin-bottom: 0.5rem;
+  }
+</style>
+
+<div class="date-section">
+  <div class="date-row">
+    <div class="date-fields">
+      <div><label>من تاريخ:</label><input type="date" id="startDate" class="form-control"></div>
+      <div><label>إلى تاريخ:</label><input type="date" id="endDate" class="form-control"></div>
+      <div><button class="btn primary" id="loadReportBtn">🔍 عرض التقرير</button><button class="btn soft" id="exportBtn">📥 تصدير Excel</button></div>
+    </div>
+  </div>
+  <div class="quick-filters">
+    <button class="quick-filter-btn" data-filter="today">📅 اليوم</button>
+    <button class="quick-filter-btn" data-filter="week">📅 أسبوعي</button>
+    <button class="quick-filter-btn" data-filter="month">📅 شهري</button>
+  </div>
+</div>
+
+<div id="executiveSummary" class="executive-box" style="display: none;"></div>
+<div class="stats-grid" id="statsGrid"></div>
+
+<h2>🚛 أكثر السيارات تكراراً للمخالفات</h2>
+<div class="table-wrap">
+  <table id="topTrucksTable">
+    <thead><tr><th>#</th><th>رقم السيارة</th><th>السائق</th><th>عدد مرات المخالفة (أيام)</th><th>متوسط الرحلات</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<h2>📋 أكثر الأسباب شيوعاً</h2>
+<div class="table-wrap">
+  <table id="topReasonsTable">
+    <thead><tr><th>#</th><th>السبب</th><th>عدد المرات</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<h2>📋 تفاصيل المخالفات (كل يوم)</h2>
+<div class="table-wrap">
+  <table id="detailsTable">
+    <thead><tr><th>التاريخ</th><th>رقم السيارة</th><th>السائق</th><th>عدد الرحلات</th><th>السبب</th><th>التفاصيل</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- السكربتات الخارجية المستخدمة في الصفحة -->
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script>
+  const API_BASE = '/api';
+  let currentData = [];
+  let currentStats = null;
+  let currentUserRole = null;
+  let currentUserPermissions = {};
+
+  // keep-alive
+  setInterval(async () => { try { await fetch('/api/me', { credentials: 'include' }); } catch(e) {} }, 3 * 60 * 1000);
+
+  async function apiCall(endpoint) {
+    const res = await fetch(`${API_BASE}${endpoint}`, { credentials: 'include' });
+    if (res.status === 401) { window.location.href = '/login'; throw new Error('غير مصرح'); }
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  function formatDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function setQuickFilter(type) {
+    const today = new Date();
+    let start, end;
+    switch(type) {
+      case 'today': start = end = today; break;
+      case 'week': start = new Date(today); start.setDate(today.getDate() - 6); end = today; break;
+      case 'month': start = new Date(today.getFullYear(), today.getMonth(), 1); end = today; break;
+      default: return;
+    }
+    document.getElementById('startDate').value = formatDate(start);
+    document.getElementById('endDate').value = formatDate(end);
+    loadReport();
+  }
+
+  function computeCorrectStats(violations) {
+    if (!violations.length) return null;
+    const uniqueTrucksViolated = new Set(violations.map(v => v.truck_number));
+    const totalViolations = violations.length;
+    const totalTripsInViolations = violations.reduce((sum, v) => sum + (v.trips_count || 0), 0);
+    const avgTrips = totalViolations ? (totalTripsInViolations / totalViolations).toFixed(2) : 0;
+    return {
+      total_trucks: uniqueTrucksViolated.size,
+      total_violations: totalViolations,
+      avg_trips: avgTrips,
+      zero_trips_count: 0
+    };
+  }
+
+  async function loadReport() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    if (!startDate || !endDate) { showToast('يرجى اختيار فترة زمنية', 'error'); return; }
+    showLoading(true);
+    try {
+      let statsFromServer = null;
+      let violations = [];
+      try { statsFromServer = await apiCall(`/truck-violations/stats/${startDate}/${endDate}`); } catch(e) { console.warn(e); showToast('تحذير: فشل تحميل الإحصائيات', 'warning'); }
+      try { violations = await apiCall(`/truck-violations/report/${startDate}/${endDate}`); } catch(e) { console.warn(e); showToast('تحذير: فشل تحميل التفاصيل', 'warning'); violations = []; }
+      currentData = violations;
+      const correctedGeneral = computeCorrectStats(violations);
+      currentStats = {
+        general: correctedGeneral || (statsFromServer ? statsFromServer.general : null),
+        topTrucks: statsFromServer ? statsFromServer.topTrucks : [],
+        topReasons: statsFromServer ? statsFromServer.topReasons : []
+      };
+      if (currentStats.general) {
+        renderStats(currentStats.general);
+        renderExecutiveSummary(currentStats.general, startDate, endDate);
+      } else {
+        document.getElementById('statsGrid').innerHTML = '<div class="stat-card"><div class="number">0</div><p>لا توجد بيانات</p></div>';
+        document.getElementById('executiveSummary').style.display = 'none';
+      }
+      renderTopTrucks(currentStats.topTrucks);
+      renderTopReasons(currentStats.topReasons);
+      renderDetails(violations);
+    } catch(e) { console.error(e); showToast('خطأ في تحميل البيانات: ' + e.message, 'error'); }
+    showLoading(false);
+  }
+
+  function renderExecutiveSummary(general, startDate, endDate) {
+    const container = document.getElementById('executiveSummary');
+    if (!general) { container.style.display = 'none'; return; }
+    container.style.display = 'block';
+    container.innerHTML = `
+      <h3>📌 خلاصة تنفيذية</h3>
+      <p>خلال الفترة من <strong>${startDate}</strong> إلى <strong>${endDate}</strong>، تم رصد <strong>${general.total_violations}</strong> مخالفة (أيام) تتعلق بعدم تحقيق الهدف (رودين على الأقل).</p>
+      <p>عدد السيارات التي سجلت مخالفة مرة واحدة على الأقل: <strong>${general.total_trucks}</strong> سيارة. متوسط عدد الرحلات لهذه السيارات في أيام المخالفة: <strong>${general.avg_trips}</strong> رحلة.</p>
+      <p>السيارات الأكثر تكراراً للمخالفات معروضة في الجدول أدناه.</p>
+    `;
+  }
+
+  function renderStats(g) {
+    if (!g) { document.getElementById('statsGrid').innerHTML = ''; return; }
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card"><h4>🚛 السيارات المخالفة</h4><div class="number">${g.total_trucks || 0}</div><div class="small-note">(عملت برحلة واحدة)</div></div>
+      <div class="stat-card"><h4>⚠️ إجمالي المخالفات</h4><div class="number">${g.total_violations || 0}</div><div class="small-note">(أيام المخالفات)</div></div>
+      <div class="stat-card"><h4>📊 متوسط الرحلات</h4><div class="number">${parseFloat(g.avg_trips || 0).toFixed(2)}</div><div class="small-note">(لكل مخالفة)</div></div>
+    `;
+  }
+
+  function renderTopTrucks(trucks) {
+    const tbody = document.querySelector('#topTrucksTable tbody');
+    if (!tbody) return;
+    if (!trucks || !trucks.length) { tbody.innerHTML = '<tr><td colspan="5" class="muted center">لا توجد بيانات</td></tr>'; return; }
+    tbody.innerHTML = trucks.map((t, i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td><strong>${escapeHtml(t.truck_number)}</strong></td>
+        <td>${escapeHtml(t.driver_name)}</td>
+        <td><span class="badge-danger">${t.violation_count}</span></td>
+        <td>${parseFloat(t.avg_trips).toFixed(2)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderTopReasons(reasons) {
+    const tbody = document.querySelector('#topReasonsTable tbody');
+    if (!tbody) return;
+    if (!reasons || !reasons.length) { tbody.innerHTML = '<tr><td colspan="3" class="muted center">لا توجد بيانات</td></tr>'; return; }
+    tbody.innerHTML = reasons.map((r, i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td>${escapeHtml(r.reason)}</td>
+        <td><span class="badge-danger">${r.count}</span></td>
+      </tr>
+    `).join('');
+  }
+
+  function renderDetails(violations) {
+    const tbody = document.querySelector('#detailsTable tbody');
+    if (!tbody) return;
+    if (!violations.length) { tbody.innerHTML = '<tr><td colspan="6" class="muted center">لا توجد مخالفات في هذه الفترة</td></tr>'; return; }
+    tbody.innerHTML = violations.map(v => `
+      <tr>
+        <td>${v.report_date}</td>
+        <td>${escapeHtml(v.truck_number)}</td>
+        <td>${escapeHtml(v.driver_name)}</td>
+        <td>${v.trips_count}</td>
+        <td>${escapeHtml(v.reason || '—')}</td>
+        <td>${escapeHtml(v.details || '—')}</td>
+      </tr>
+    `).join('');
+  }
+
+  async function exportToExcel() {
+    const canExport = (currentUserRole === 'admin') || (currentUserPermissions.exportReports === true);
+    if (!canExport) { showToast('❌ غير مصرح لك بتصدير التقارير', 'error'); return; }
+    if (!currentData.length) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
+    showLoading(true);
+    try {
+      const ExcelJS = window.ExcelJS;
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'نظام كسارة الحبردي';
+      const headerStyle = { font: { bold: true }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } } };
+      const border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+      const ws1 = workbook.addWorksheet('إحصائيات عامة', { views: [{ rightToLeft: true }] });
+      ws1.columns = [{ width: 30 }, { width: 20 }];
+      ws1.mergeCells('A1:B1'); ws1.getCell('A1').value = '📊 إحصائيات السيارات المخالفة'; ws1.getCell('A1').font = { bold: true, size: 16 };
+      const g = currentStats.general || {};
+      const statsRows = [
+        ['إجمالي السيارات المخالفة', g.total_trucks || 0],
+        ['إجمالي المخالفات (أيام)', g.total_violations || 0],
+        ['متوسط الرحلات لكل مخالفة', parseFloat(g.avg_trips || 0).toFixed(2)]
+      ];
+      statsRows.forEach((row, i) => { ws1.getRow(3 + i).values = row; ws1.getRow(3 + i).eachCell(cell => cell.border = border); });
+      const ws2 = workbook.addWorksheet('أكثر السيارات مخالفة', { views: [{ rightToLeft: true }] });
+      ws2.columns = [{ width: 10 }, { width: 15 }, { width: 25 }, { width: 15 }, { width: 15 }];
+      ws2.getRow(1).values = ['#', 'رقم السيارة', 'السائق', 'عدد أيام المخالفة', 'متوسط الرحلات'];
+      ws2.getRow(1).eachCell(cell => { cell.font = headerStyle.font; cell.fill = headerStyle.fill; });
+      (currentStats.topTrucks || []).forEach((t, i) => { ws2.getRow(2 + i).values = [i+1, t.truck_number, t.driver_name, t.violation_count, parseFloat(t.avg_trips).toFixed(2)]; });
+      const ws3 = workbook.addWorksheet('الأسباب الشائعة', { views: [{ rightToLeft: true }] });
+      ws3.columns = [{ width: 10 }, { width: 40 }, { width: 15 }];
+      ws3.getRow(1).values = ['#', 'السبب', 'عدد المرات']; ws3.getRow(1).eachCell(cell => { cell.font = headerStyle.font; cell.fill = headerStyle.fill; });
+      (currentStats.topReasons || []).forEach((r, i) => { ws3.getRow(2 + i).values = [i+1, r.reason, r.count]; });
+      const ws4 = workbook.addWorksheet('تفاصيل المخالفات', { views: [{ rightToLeft: true }] });
+      ws4.columns = [{ width: 12 }, { width: 15 }, { width: 25 }, { width: 12 }, { width: 35 }, { width: 40 }];
+      ws4.getRow(1).values = ['التاريخ', 'رقم السيارة', 'السائق', 'عدد الرحلات', 'السبب', 'التفاصيل'];
+      ws4.getRow(1).eachCell(cell => { cell.font = headerStyle.font; cell.fill = headerStyle.fill; });
+      currentData.forEach((v, i) => { ws4.getRow(2 + i).values = [v.report_date, v.truck_number, v.driver_name, v.trips_count, v.reason || '', v.details || '']; });
+      const buffer = await workbook.xlsx.writeBuffer();
+      const startDate = document.getElementById('startDate').value, endDate = document.getElementById('endDate').value;
+      saveAs(new Blob([buffer]), `تقرير_المخالفات_${startDate}_إلى_${endDate}.xlsx`);
+      showToast('✅ تم تصدير التقرير بنجاح', 'success');
+    } catch(e) { console.error(e); showToast('خطأ في التصدير: ' + e.message, 'error'); }
+    showLoading(false);
+  }
+
+  function showToast(msg, type) {
+    let container = document.getElementById('toastContainer');
+    if (!container) { container = document.createElement('div'); container.id = 'toastContainer'; container.style.position = 'fixed'; container.style.top = '20px'; container.style.left = '20px'; container.style.zIndex = '3000'; document.body.appendChild(container); }
+    const toast = document.createElement('div'); toast.className = `toast ${type}`; toast.innerText = msg; container.appendChild(toast); setTimeout(() => toast.remove(), 3000);
+  }
+  function showLoading(show) {
+    let loader = document.getElementById('globalLoader');
+    if (!loader) { loader = document.createElement('div'); loader.id = 'globalLoader'; loader.style.position = 'fixed'; loader.style.top = '0'; loader.style.left = '0'; loader.style.width = '100%'; loader.style.height = '100%'; loader.style.background = 'rgba(0,0,0,0.6)'; loader.style.display = 'flex'; loader.style.alignItems = 'center'; loader.style.justifyContent = 'center'; loader.style.zIndex = '9999'; loader.innerHTML = '<div class="spinner"></div>'; document.body.appendChild(loader); }
+    loader.style.display = show ? 'flex' : 'none';
+  }
+  function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+
+  async function loadUserAndPermissions() {
+    try {
+      const me = await apiCall('/me');
+      currentUserRole = me.user.role;
+      currentUserPermissions = me.user.permissions || {};
+      const hasView = (currentUserRole === 'admin') || (currentUserPermissions.viewReports === true);
+      if (!hasView) {
+        document.getElementById('authorizedContent')?.remove();
+        document.body.innerHTML = '<div class="unauthorized" style="text-align:center;padding:2rem;">⛔ غير مصرح لك بالوصول إلى تقرير السيارات المخالفة.</div>';
+        return false;
+      }
+      const canExport = (currentUserRole === 'admin') || (currentUserPermissions.exportReports === true);
+      document.getElementById('exportBtn').style.display = canExport ? 'inline-flex' : 'none';
+      return true;
+    } catch(err) { console.error(err); return false; }
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    const authorized = await loadUserAndPermissions();
+    if (!authorized) return;
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    document.getElementById('startDate').value = todayStr;
+    document.getElementById('endDate').value = todayStr;
+    await loadReport();
+    document.getElementById('loadReportBtn').onclick = loadReport;
+    document.getElementById('exportBtn').onclick = exportToExcel;
+    document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => setQuickFilter(btn.getAttribute('data-filter')));
+    });
+  });
+</script>

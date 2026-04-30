@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - كسارة الحبردي</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .login-wrapper{max-width:450px;margin:0 auto;width:100%}
+        .login-card{background:rgba(255,255,255,0.96);border-radius:28px;padding:1.5rem;box-shadow:0 15px 30px rgba(0,0,0,0.1);border:1px solid #e9e0cf}
+        .card-header{text-align:center;margin-bottom:1.2rem;position:relative}
+        .card-header .icon{background:#0a2f1a;width:60px;height:60px;line-height:60px;border-radius:50%;display:inline-block;margin-bottom:0.5rem}
+        .card-header .icon i{font-size:1.8rem;color:#c9a03d}
+        .toggle-btn{position:absolute;left:0;top:15px;background:#c9a03d;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer}
+        .demo-info{background:#f1f5f9;padding:0.5rem;border-radius:20px;text-align:center;font-size:0.75rem;margin-bottom:1.2rem}
+        .input-group{margin-bottom:1rem}
+        .input-wrapper{position:relative}
+        .input-wrapper i:first-child{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#94a3b8}
+        .input-wrapper input{width:100%;padding:10px 42px 10px 14px;border:1px solid #cbd5e1;border-radius:40px}
+        .toggle-pwd{position:absolute;left:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer}
+        .btn-login{width:100%;background:#0a2f1a;color:white;padding:10px;border-radius:40px;font-weight:bold;cursor:pointer;margin-top:0.5rem}
+        .btn-login:hover{background:#c9a03d;color:#0a2f1a}
+        .error-message{color:#dc2626;background:#fee2e2;padding:0.5rem;border-radius:28px;margin-top:0.8rem;display:none;text-align:center}
+        .back-link{text-align:center;margin-top:1.2rem}
+        .back-link a{background:#c9a03d;color:#0a2f1a;padding:0.4rem 1.2rem;border-radius:40px;text-decoration:none;display:inline-block}
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <header><div class="header-container"><div class="logo-area"><div class="graphic-logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="65" height="65"><rect width="120" height="120" fill="#1a3f1a" rx="28"/><path d="M25,75 L48,40 L70,60 L90,35 L105,55 L98,82 L25,82 Z" fill="#c9a03d" stroke="#e9c468" stroke-width="2"/><rect x="42" y="68" width="58" height="22" rx="6" fill="#b87c2a"/><rect x="46" y="60" width="36" height="12" rx="4" fill="#dfb45e"/><circle cx="55" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/><circle cx="85" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/><circle cx="55" cy="90" r="3.5" fill="#aaa"/><circle cx="85" cy="90" r="3.5" fill="#aaa"/><text x="60" y="114" font-size="12" fill="#FFE3A4" text-anchor="middle" font-weight="800">زرعة الخير</text><text x="60" y="27" font-size="9" fill="#FFD966" text-anchor="middle">النقليات</text></svg></div><div class="company-title"><h1>شركة زرعة الخير للنقليات</h1><p>🚛 كسارة الحبردي بطريق الصمان | منطقة الصمان - طريق الرياض الدمام</p></div></div></div></header>
+    <div class="main-layout"><div id="side-nav-container"></div>
+        <main class="main-content" style="display:flex; justify-content:center; align-items:center"><div class="login-wrapper"><div class="login-card"><div class="card-header"><div class="icon"><i id="headerIcon" class="fas fa-user-tie"></i></div><h2 id="headerTitle">عميل</h2><button class="toggle-btn" id="toggleRoleBtn"><i class="fas fa-exchange-alt"></i></button></div><div id="demoInfo" class="demo-info"><i class="fas fa-info-circle"></i> بيانات تجريبية: <strong id="demoCreds">client / client123</strong></div><form id="loginForm"><div class="input-group"><label>اسم المستخدم</label><div class="input-wrapper"><i class="fas fa-user"></i><input type="text" id="username" placeholder="أدخل اسم المستخدم"></div></div><div class="input-group"><label>كلمة المرور</label><div class="input-wrapper"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="••••••"><button type="button" class="toggle-pwd" id="togglePwd"><i class="fas fa-eye-slash"></i></button></div></div><button type="submit" class="btn-login">دخول <i class="fas fa-arrow-left"></i></button><div id="errorMsg" class="error-message"></div></form><div class="back-link"><a href="index.html"><i class="fas fa-arrow-right"></i> العودة إلى الرئيسية</a></div></div></div></main>
+    </div>
+    <footer><p>© 2025 شركة زرعة الخير للنقليات - كسارة الحبردي بطريق الصمان | جميع الحقوق محفوظة</p></footer>
+</div>
+<script>
+    let currentRole='client';
+    const users={client:{username:"client",password:"client123",role:"client",redirect:"client-orders.html",title:"عميل",icon:"fas fa-user-tie",creds:"client / client123"},employee:{username:"sales",password:"sales123",role:"sales",redirect:"dashboard.html",title:"فريق المبيعات",icon:"fas fa-chart-line",creds:"sales / sales123"}};
+    const headerIcon=document.getElementById('headerIcon'),headerTitle=document.getElementById('headerTitle'),demoCreds=document.getElementById('demoCreds'),usernameInput=document.getElementById('username'),passwordInput=document.getElementById('password'),errorDiv=document.getElementById('errorMsg'),toggleRoleBtn=document.getElementById('toggleRoleBtn'),togglePwdBtn=document.getElementById('togglePwd');
+    function updateUIForRole(){const rd=users[currentRole];headerIcon.className=rd.icon;headerTitle.textContent=rd.title;demoCreds.textContent=rd.creds;const arrow=toggleRoleBtn.querySelector('i');if(currentRole==='client')arrow.className='fas fa-arrow-left';else arrow.className='fas fa-arrow-right';usernameInput.value='';passwordInput.value='';errorDiv.style.display='none';}
+    function toggleRole(){currentRole=(currentRole==='client')?'employee':'client';updateUIForRole();}
+    function handleLogin(e){e.preventDefault();const un=usernameInput.value.trim(),pw=passwordInput.value,rd=users[currentRole];if(!un||!pw){errorDiv.textContent='الرجاء إدخال اسم المستخدم وكلمة المرور';errorDiv.style.display='block';return;}
+    if(un===rd.username&&pw===rd.password){sessionStorage.setItem('loggedInUser',JSON.stringify({username:un,role:rd.role}));window.location.href=rd.redirect;}else{errorDiv.textContent='اسم المستخدم أو كلمة المرور غير صحيحة';errorDiv.style.display='block';}}
+    function togglePasswordVisibility(){const type=passwordInput.getAttribute('type')==='password'?'text':'password';passwordInput.setAttribute('type',type);togglePwdBtn.innerHTML=type==='password'?'<i class="fas fa-eye-slash"></i>':'<i class="fas fa-eye"></i>';}
+    toggleRoleBtn.addEventListener('click',toggleRole);togglePwdBtn.addEventListener('click',togglePasswordVisibility);document.getElementById('loginForm').addEventListener('submit',handleLogin);updateUIForRole();
+</script>
+<script src="load-nav.js"></script>
+</body>
+</html>

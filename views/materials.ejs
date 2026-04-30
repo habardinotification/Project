@@ -1,0 +1,193 @@
+<!-- views/materials.ejs -->
+<style>
+  /* أنماط إضافية خاصة بصفحة أنواع البحص */
+  .materials-list {
+    margin-top: 1.5rem;
+  }
+  .material-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.8rem 1.2rem;
+    margin-bottom: 0.8rem;
+    transition: 0.2s;
+  }
+  .material-item:hover {
+    transform: translateX(-4px);
+    border-color: var(--primary);
+  }
+  .chip {
+    background: var(--primary-soft);
+    color: var(--primary);
+    padding: 0.3rem 1rem;
+    border-radius: 40px;
+    font-weight: 600;
+  }
+  @media (max-width: 768px) {
+    .material-item {
+      flex-direction: column;
+      gap: 0.8rem;
+      align-items: stretch;
+      text-align: center;
+    }
+  }
+</style>
+
+<div class="card">
+  <div class="section-head">
+    <h2>📦 أنواع البحص</h2>
+    <button class="btn primary" id="addMaterialBtn">➕ إضافة نوع جديد</button>
+  </div>
+  <div id="materialsList" class="materials-list"></div>
+</div>
+
+<!-- مودال إضافة نوع جديد -->
+<div class="modal" id="materialModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>➕ إضافة نوع بحص</h3>
+      <button class="close-modal" onclick="closeModal('materialModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>📦 اسم النوع (مثال: 1/2, 3/4, 3/8)</label>
+        <input type="text" id="materialName" class="form-control" placeholder="أدخل النوع">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn soft" onclick="closeModal('materialModal')">إلغاء</button>
+      <button class="btn primary" id="saveMaterialBtn">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = '/api';
+  let materials = [];
+
+  async function apiCall(endpoint, method = 'GET', data = null) {
+    const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+    if (data && (method === 'POST' || method === 'PUT')) options.body = JSON.stringify(data);
+    const res = await fetch(`${API_BASE}${endpoint}`, options);
+    if (res.status === 401) { window.location.href = '/login'; throw new Error('غير مصرح'); }
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function loadSettings() {
+    try {
+      const data = await apiCall('/settings');
+      materials = data.materials || [];
+      renderMaterialsList();
+    } catch (e) { console.error(e); showToast('خطأ في تحميل البيانات', 'error'); }
+  }
+
+  async function saveSettings() {
+    try {
+      const settings = await apiCall('/settings');
+      settings.materials = materials;
+      await apiCall('/settings', 'PUT', settings);
+      return true;
+    } catch (e) { showToast('خطأ في حفظ الإعدادات', 'error'); return false; }
+  }
+
+  function renderMaterialsList() {
+    const container = document.getElementById('materialsList');
+    if (!container) return;
+    if (materials.length === 0) {
+      container.innerHTML = '<p class="muted center">لا توجد أنواع بحص</p>';
+      return;
+    }
+    container.innerHTML = materials.map((m, idx) => `
+      <div class="material-item">
+        <span class="chip">📦 ${escapeHtml(m)}</span>
+        <button class="btn danger soft btn-sm" onclick="deleteMaterial(${idx})">🗑️ حذف</button>
+      </div>
+    `).join('');
+  }
+
+  function openAddMaterialModal() {
+    document.getElementById('materialName').value = '';
+    openModal('materialModal');
+  }
+
+  async function saveMaterial() {
+    const name = document.getElementById('materialName').value.trim();
+    if (!name) { showToast('أدخل الاسم', 'error'); return; }
+    if (materials.includes(name)) { showToast('النوع موجود بالفعل', 'error'); return; }
+    materials.push(name);
+    if (await saveSettings()) {
+      renderMaterialsList();
+      closeModal('materialModal');
+      showToast('✅ تم الإضافة', 'success');
+    }
+  }
+
+  async function deleteMaterial(idx) {
+    if (!confirm(`حذف "${materials[idx]}"؟`)) return;
+    materials.splice(idx, 1);
+    if (await saveSettings()) {
+      renderMaterialsList();
+      showToast('تم الحذف', 'info');
+    }
+  }
+
+  function showToast(msg, type) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.position = 'fixed';
+      container.style.top = '20px';
+      container.style.left = '20px';
+      container.style.zIndex = '3000';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerText = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function showLoading(show) {
+    let loader = document.getElementById('globalLoader');
+    if (!loader) {
+      loader = document.createElement('div');
+      loader.id = 'globalLoader';
+      loader.style.position = 'fixed';
+      loader.style.top = '0';
+      loader.style.left = '0';
+      loader.style.width = '100%';
+      loader.style.height = '100%';
+      loader.style.background = 'rgba(0,0,0,0.6)';
+      loader.style.display = 'flex';
+      loader.style.alignItems = 'center';
+      loader.style.justifyContent = 'center';
+      loader.style.zIndex = '9999';
+      loader.innerHTML = '<div class="spinner"></div>';
+      document.body.appendChild(loader);
+    }
+    loader.style.display = show ? 'flex' : 'none';
+  }
+
+  function openModal(id) { document.getElementById(id).classList.add('active'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+  function escapeHtml(str) { return str ? str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])) : ''; }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    showLoading(true);
+    try {
+      await loadSettings();
+    } catch (e) { showToast('⚠️ خطأ في الاتصال', 'error'); }
+    showLoading(false);
+    document.getElementById('addMaterialBtn').onclick = openAddMaterialModal;
+    document.getElementById('saveMaterialBtn').onclick = saveMaterial;
+    document.getElementById('materialName').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') saveMaterial();
+    });
+  });
+</script>

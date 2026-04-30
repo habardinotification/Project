@@ -1,0 +1,899 @@
+<!-- views/orders.ejs -->
+<!-- صفحة الطلبات - فصل تام بين طلبات اليوم والغد -->
+<style>
+  /* أنماط مخصصة لصفحة الطلبات - تصميم أنيق ومرتب */
+  .orders-page {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  /* تحسين المربعات والبطاقات */
+  .order-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .order-card:hover {
+    background: var(--primary-soft);
+    transform: translateX(-2px);
+  }
+  
+  .order-number {
+    background: var(--primary);
+    color: white;
+    border-radius: 20px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    min-width: 35px;
+    text-align: center;
+  }
+  
+  .order-factory-badge {
+    background: var(--primary-bg);
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary);
+  }
+  
+  .order-material-badge {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+  }
+  
+  .order-time {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+  }
+  
+  .order-actions {
+    display: flex;
+    gap: 0.3rem;
+  }
+  
+  .order-actions button {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    border-radius: 8px;
+  }
+  
+  /* تحسين نموذج الإضافة */
+  .add-order-form {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+  }
+  
+  .form-grid-compact {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.8rem;
+    align-items: end;
+  }
+  
+  .form-group-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  
+  .form-group-compact label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  
+  /* تحسين القوائم المنسدلة مع البحث */
+  .searchable-select {
+    position: relative;
+    width: 100%;
+  }
+  
+  .select-input {
+    width: 100%;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  
+  .select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    margin-top: 4px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .select-dropdown.show {
+    display: block;
+  }
+  
+  .search-box {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    background: inherit;
+  }
+  
+  .search-box input {
+    width: 100%;
+    padding: 0.4rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+  }
+  
+  .dropdown-option {
+    padding: 0.5rem 0.7rem;
+    cursor: pointer;
+    transition: 0.1s;
+    font-size: 0.85rem;
+  }
+  
+  .dropdown-option:hover {
+    background: var(--primary);
+    color: white;
+  }
+  
+  /* تبويبات صغيرة */
+  .tabs-compact {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .tab-compact {
+    padding: 0.4rem 1rem;
+    border-radius: 30px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: 0.2s;
+  }
+  
+  .tab-compact.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  
+  /* شريط معلومات صغير */
+  .stats-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background: var(--bg-card);
+    border-radius: 12px;
+    font-size: 0.8rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  
+  .stat-item {
+    display: flex;
+    gap: 0.3rem;
+    align-items: baseline;
+  }
+  
+  .stat-number {
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--primary);
+  }
+  
+  /* أزرار صغيرة */
+  .btn-sm-compact {
+    padding: 0.3rem 0.8rem;
+    font-size: 0.75rem;
+    border-radius: 8px;
+  }
+  
+  /* تنسيق مؤشر الغد */
+  .tomorrow-badge {
+    background: #f59e0b;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+  }
+  
+  /* تحسين التوافق مع الجوال */
+  @media (max-width: 768px) {
+    .form-grid-compact {
+      grid-template-columns: 1fr;
+    }
+    .order-card {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .order-actions {
+      justify-content: flex-end;
+    }
+  }
+</style>
+
+<div class="orders-page">
+  <!-- شريط التاريخ والاحصائيات -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span>📅</span>
+      <input type="date" id="orderDate" style="border: none; background: transparent; color: var(--text-primary); font-family: inherit;">
+    </div>
+    <div class="stat-item">
+      <span>📊 عدد الطلبات:</span>
+      <span class="stat-number" id="ordersCount">0</span>
+    </div>
+    <div id="adminStats" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <button class="btn soft btn-sm-compact" id="exportExcelBtn">📥 Excel</button>
+      <button class="btn primary btn-sm-compact" id="manualDistributeBtn">🔄 توزيع</button>
+    </div>
+  </div>
+
+  <!-- تبويبات اليوم والغد -->
+  <div class="tabs-compact">
+    <button class="tab-compact active" data-tab="today">📅 طلبات اليوم</button>
+    <button class="tab-compact" data-tab="tomorrow">📆 طلبات الغد</button>
+  </div>
+
+  <!-- نموذج إضافة الطلبات -->
+  <div id="addOrderSection" class="add-order-form">
+    <h4 style="margin-bottom: 0.8rem; font-size: 0.9rem;">➕ إضافة طلب جديد</h4>
+    
+    <div class="form-grid-compact">
+      <!-- اختيار اليوم أو الغد -->
+      <div class="form-group-compact">
+        <label>⏰ وقت التسليم</label>
+        <select id="deliveryDaySelect" class="select-input">
+          <option value="today">📅 اليوم</option>
+          <option value="tomorrow">📆 الغد</option>
+        </select>
+      </div>
+      
+      <!-- قائمة المصانع مع بحث -->
+      <div class="form-group-compact">
+        <label>🏭 المصنع</label>
+        <div class="searchable-select" id="factorySelectWrapper">
+          <input type="text" class="select-input" id="factorySearchInput" placeholder="ابحث عن مصنع..." autocomplete="off">
+          <input type="hidden" id="selectedFactory">
+          <div class="select-dropdown" id="factoryDropdown">
+            <div class="search-box">
+              <input type="text" id="factorySearchBox" placeholder="🔍 بحث...">
+            </div>
+            <div id="factoryOptions"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- قائمة أنواع البحص مع بحث -->
+      <div class="form-group-compact">
+        <label>🧱 نوع البحص</label>
+        <div class="searchable-select" id="materialSelectWrapper">
+          <input type="text" class="select-input" id="materialSearchInput" placeholder="اختر النوع..." autocomplete="off">
+          <input type="hidden" id="selectedMaterial">
+          <div class="select-dropdown" id="materialDropdown">
+            <div class="search-box">
+              <input type="text" id="materialSearchBox" placeholder="🔍 بحث...">
+            </div>
+            <div id="materialOptions"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group-compact">
+        <label>🔢 عدد الرحلات</label>
+        <input type="number" id="orderCount" min="1" value="1" class="select-input" style="width: 100px;">
+      </div>
+      
+      <div class="form-group-compact">
+        <label>⏰ التوقيت</label>
+        <select id="orderTime" class="select-input">
+          <option value="">بدون توقيت</option>
+          <option value="صباحاً">🌅 صباحاً (6ص - 12م)</option>
+          <option value="بعد الظهر">☀️ بعد الظهر (12م - 4م)</option>
+          <option value="مساءً">🌙 مساءً (4م - 8م)</option>
+          <option value="ليل">⭐ ليلاً (8م - 12ص)</option>
+        </select>
+      </div>
+      
+      <button class="btn primary btn-sm-compact" id="addOrderBtn" style="height: 35px; align-self: end;">✅ إضافة</button>
+    </div>
+    
+    <!-- أزرار الإضافة السريعة -->
+    <div style="margin-top: 0.8rem;">
+      <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.3rem;">⚡ إضافة سريعة:</div>
+      <div id="quickAddButtons" style="display: flex; flex-wrap: wrap; gap: 0.3rem;"></div>
+    </div>
+  </div>
+
+  <!-- قائمة طلبات اليوم -->
+  <div id="todayOrdersContainer">
+    <div id="todayOrders"></div>
+  </div>
+  
+  <!-- قائمة طلبات الغد -->
+  <div id="tomorrowOrdersContainer" style="display: none;">
+    <div id="tomorrowOrders"></div>
+  </div>
+</div>
+
+<!-- مودال التعديل المبسط -->
+<div class="modal" id="editOrderModal">
+  <div class="modal-content" style="max-width: 400px;">
+    <div class="modal-header">
+      <h3 style="font-size: 1rem;">✏️ تعديل الطلب</h3>
+      <button class="close-modal" onclick="closeModal('editOrderModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editOrderId">
+      <input type="hidden" id="editOrderType"><!-- today أو tomorrow -->
+      <div class="form-group" style="margin-bottom: 0.8rem;">
+        <label style="font-size: 0.8rem;">🏭 المصنع</label>
+        <div id="editFactoryContainer"></div>
+      </div>
+      <div class="form-group" style="margin-bottom: 0.8rem;">
+        <label style="font-size: 0.8rem;">🧱 نوع البحص</label>
+        <select id="editOrderMaterial" class="form-control" style="padding: 0.4rem;"></select>
+      </div>
+      <div class="form-group" style="margin-bottom: 0.8rem;">
+        <label style="font-size: 0.8rem;">⏰ التوقيت</label>
+        <select id="editOrderTime" class="form-control" style="padding: 0.4rem;">
+          <option value="">بدون توقيت</option>
+          <option value="صباحاً">صباحاً</option>
+          <option value="بعد الظهر">بعد الظهر</option>
+          <option value="مساءً">مساءً</option>
+          <option value="ليل">ليلاً</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn soft" onclick="closeModal('editOrderModal')">إلغاء</button>
+      <button class="btn primary" id="saveEditBtn">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  const API_BASE = '/api';
+  let factories = [], materials = [];
+  let todayOrders = [];      // طلبات اليوم
+  let tomorrowOrders = [];   // طلبات الغد
+  let currentDate = '', tomorrowDate = '';
+  let currentDistribution = [];
+  let currentUser = null, currentUserFactory = null, currentUserRole = null, currentUserPermissions = {};
+  let currentTab = 'today';
+
+  // دوال مساعدة
+  async function apiCall(endpoint, method = 'GET', data = null) {
+    const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+    if (data) options.body = JSON.stringify(data);
+    const res = await fetch(`${API_BASE}${endpoint}`, options);
+    if (res.status === 401) { window.location.href = '/login'; throw new Error('غير مصرح'); }
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  function hasViewOrders() { return (currentUserRole === 'admin') || (currentUserPermissions.viewOrders === true); }
+  function hasAddOrders() { return (currentUserRole === 'admin') || (currentUserPermissions.addOrders === true); }
+  function hasEditOrders() { return (currentUserRole === 'admin') || (currentUserPermissions.editOrders === true); }
+  function hasDeleteOrders() { return (currentUserRole === 'admin') || (currentUserPermissions.deleteOrders === true); }
+  function hasManageDistribution() { return (currentUserRole === 'admin') || (currentUserPermissions.manageDistribution === true); }
+  function hasExportReports() { return (currentUserRole === 'admin') || (currentUserPermissions.exportReports === true); }
+
+  async function loadCurrentUser() {
+    try {
+      const me = await apiCall('/me');
+      currentUser = me.user;
+      currentUserRole = me.user.role;
+      currentUserFactory = me.user.factory;
+      currentUserPermissions = me.user.permissions || {};
+      if (!hasViewOrders()) {
+        document.body.innerHTML = '<div style="text-align:center;padding:2rem;">⛔ غير مصرح لك بالوصول</div>';
+        return false;
+      }
+      const canAdd = hasAddOrders();
+      document.getElementById('addOrderSection').style.display = canAdd ? 'block' : 'none';
+      const canManageDist = hasManageDistribution();
+      const canExport = hasExportReports();
+      document.getElementById('manualDistributeBtn').style.display = canManageDist ? 'inline-flex' : 'none';
+      document.getElementById('exportExcelBtn').style.display = canExport ? 'inline-flex' : 'none';
+      if (currentUserRole === 'client') {
+        document.getElementById('adminStats').style.display = 'none';
+      }
+      return true;
+    } catch(e) { console.error(e); return false; }
+  }
+
+  async function loadSettings() {
+    try {
+      const data = await apiCall('/settings');
+      factories = (data.factories || []).map(f => typeof f === 'object' ? (f.name || f.factory_name || f.text || '') : f).filter(f => f && f.trim());
+      materials = (data.materials || []).map(m => typeof m === 'object' ? (m.name || m.material_name || m.text || '') : m).filter(m => m && m.trim());
+      initSearchableSelects();
+      renderQuickAddButtons();
+      
+      // تحديث خيارات التعديل
+      const editMaterialSelect = document.getElementById('editOrderMaterial');
+      if (editMaterialSelect) {
+        editMaterialSelect.innerHTML = materials.map(m => `<option value="${m}">بحص ${m}</option>`).join('');
+      }
+    } catch(e) { showToast('خطأ في التحميل', 'error'); }
+  }
+  
+  // تهيئة القوائم المنسدلة مع البحث
+  function initSearchableSelects() {
+    if (currentUserRole !== 'client') {
+      setupSearchableSelect('factory', factories);
+    } else {
+      document.getElementById('factorySearchInput').value = currentUserFactory;
+      document.getElementById('factorySearchInput').disabled = true;
+      document.getElementById('selectedFactory').value = currentUserFactory;
+    }
+    setupSearchableSelect('material', materials);
+  }
+  
+  function setupSearchableSelect(type, items) {
+    const searchInput = document.getElementById(`${type}SearchInput`);
+    const hiddenInput = document.getElementById(`selected${type.charAt(0).toUpperCase() + type.slice(1)}`);
+    const dropdown = document.getElementById(`${type}Dropdown`);
+    const searchBox = document.getElementById(`${type}SearchBox`);
+    const optionsContainer = document.getElementById(`${type}Options`);
+    
+    if (!searchInput) return;
+    
+    searchInput.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.select-dropdown').forEach(d => d.classList.remove('show'));
+      dropdown.classList.add('show');
+      renderOptions(type, items, '');
+      if (searchBox) searchBox.focus();
+    });
+    
+    if (searchBox) {
+      searchBox.addEventListener('input', (e) => {
+        renderOptions(type, items, e.target.value);
+      });
+    }
+    
+    document.addEventListener('click', (e) => {
+      if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('show');
+      }
+    });
+    
+    renderOptions(type, items, '');
+  }
+  
+  function renderOptions(type, items, searchTerm) {
+    const optionsContainer = document.getElementById(`${type}Options`);
+    if (!optionsContainer) return;
+    
+    const filtered = items.filter(item => 
+      item.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    if (filtered.length === 0) {
+      optionsContainer.innerHTML = '<div style="padding: 0.5rem; color: var(--text-muted);">لا توجد نتائج</div>';
+      return;
+    }
+    
+    optionsContainer.innerHTML = filtered.map(item => `
+      <div class="dropdown-option" data-value="${item}">
+        ${item}
+      </div>
+    `).join('');
+    
+    optionsContainer.querySelectorAll('.dropdown-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const value = opt.getAttribute('data-value');
+        document.getElementById(`${type}SearchInput`).value = value;
+        document.getElementById(`selected${type.charAt(0).toUpperCase() + type.slice(1)}`).value = value;
+        document.getElementById(`${type}Dropdown`).classList.remove('show');
+      });
+    });
+  }
+  
+  function getSelectedFactory() {
+    if (currentUserRole === 'client') return currentUserFactory;
+    return document.getElementById('selectedFactory').value;
+  }
+  
+  function getSelectedMaterial() {
+    return document.getElementById('selectedMaterial').value;
+  }
+  
+  function getSelectedDeliveryDay() {
+    return document.getElementById('deliveryDaySelect').value;
+  }
+  
+  function renderQuickAddButtons() {
+    const container = document.getElementById('quickAddButtons');
+    if (!container) return;
+    const quickMaterials = materials.slice(0, 6);
+    container.innerHTML = quickMaterials.map(m => `
+      <button class="btn soft btn-sm-compact" onclick="quickAdd('${m}',1)" style="font-size: 0.7rem;">${m} +1</button>
+    `).join('');
+    if (materials.length > 6) {
+      container.innerHTML += `<button class="btn soft btn-sm-compact" onclick="document.getElementById('materialSearchInput').click()" style="font-size: 0.7rem;">📦 المزيد...</button>`;
+    }
+  }
+  
+  // تحميل بيانات اليوم والغد بشكل منفصل
+  async function loadDayData() {
+    currentDate = document.getElementById('orderDate').value;
+    if (!currentDate) {
+      const today = new Date().toISOString().slice(0,10);
+      currentDate = today;
+      document.getElementById('orderDate').value = today;
+    }
+    // حساب تاريخ الغد
+    const tomorrowDateObj = new Date(currentDate);
+    tomorrowDateObj.setDate(tomorrowDateObj.getDate() + 1);
+    tomorrowDate = tomorrowDateObj.toISOString().slice(0,10);
+    
+    showLoading(true);
+    try {
+      // تحميل طلبات اليوم
+      const todayData = await apiCall(`/day/${currentDate}`);
+      todayOrders = todayData.orders || [];
+      currentDistribution = todayData.distribution || [];
+      
+      // تحميل طلبات الغد بشكل منفصل
+      const tomorrowData = await apiCall(`/day/${tomorrowDate}`);
+      tomorrowOrders = tomorrowData.orders || [];
+      
+      renderOrders();
+    } catch(e) { 
+      todayOrders = []; 
+      tomorrowOrders = []; 
+      renderOrders(); 
+      showToast('خطأ في التحميل', 'error'); 
+    }
+    showLoading(false);
+  }
+  
+  // حفظ طلبات اليوم
+  async function saveTodayOrders() {
+    try {
+      const cleaned = todayOrders.map(o => ({
+        id: o.id, factory: o.factory, material: o.material,
+        time: (o.time && o.time !== 'undefined' && o.time !== 'null') ? o.time : '',
+        timestamp: o.timestamp
+      }));
+      await apiCall(`/day/${currentDate}`, 'PUT', { orders: cleaned, distribution: [] });
+      return true;
+    } catch(e) { showToast('خطأ في حفظ طلبات اليوم: ' + e.message, 'error'); return false; }
+  }
+  
+  // حفظ طلبات الغد
+  async function saveTomorrowOrders() {
+    try {
+      const cleaned = tomorrowOrders.map(o => ({
+        id: o.id, factory: o.factory, material: o.material,
+        time: (o.time && o.time !== 'undefined' && o.time !== 'null') ? o.time : '',
+        timestamp: o.timestamp
+      }));
+      await apiCall(`/day/${tomorrowDate}`, 'PUT', { orders: cleaned, distribution: [] });
+      return true;
+    } catch(e) { showToast('خطأ في حفظ طلبات الغد: ' + e.message, 'error'); return false; }
+  }
+  
+  // إضافة طلب جديد (يتم وضعه في اليوم أو الغد حسب الاختيار)
+  async function addOrder() {
+    if (!hasAddOrders()) { showToast('❌ غير مصرح', 'error'); return; }
+    const factory = getSelectedFactory();
+    const material = getSelectedMaterial();
+    const count = parseInt(document.getElementById('orderCount').value);
+    let time = document.getElementById('orderTime').value;
+    const deliveryDay = getSelectedDeliveryDay();
+    
+    if (!factory || !material || !count) { showToast('املأ جميع الحقول', 'error'); return; }
+    if (currentUserRole === 'client' && factory !== currentUserFactory) { showToast('❌ لا يمكنك الإضافة لمصنع آخر', 'error'); return; }
+    
+    showLoading(true);
+    const newOrders = [];
+    for (let i = 0; i < count; i++) {
+      newOrders.push({
+        id: Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '_' + i,
+        factory: factory,
+        material: material,
+        time: time,
+        timestamp: new Date().toLocaleTimeString('ar-SA')
+      });
+    }
+    
+    let success = false;
+    if (deliveryDay === 'today') {
+      todayOrders = [...newOrders, ...todayOrders];
+      success = await saveTodayOrders();
+    } else {
+      tomorrowOrders = [...newOrders, ...tomorrowOrders];
+      success = await saveTomorrowOrders();
+    }
+    
+    if (success) {
+      renderOrders();
+      document.getElementById('orderCount').value = '1';
+      document.getElementById('orderTime').value = '';
+      showToast(`✅ تم إضافة ${count} طلب ${deliveryDay === 'today' ? 'لليوم' : 'للغد'}`, 'success');
+      
+      // لو تمت الإضافة للغد والتبويب الحالي اليوم، نظهر إشعار
+      if (deliveryDay === 'tomorrow' && currentTab === 'today') {
+        showToast('📆 تم إضافة الطلب لطلبات الغد', 'info');
+      }
+    }
+    showLoading(false);
+  }
+  
+  async function quickAdd(material, count) {
+    if (!hasAddOrders()) { showToast('❌ غير مصرح', 'error'); return; }
+    const factory = getSelectedFactory();
+    const deliveryDay = getSelectedDeliveryDay();
+    if (!factory) { showToast('اختر المصنع أولاً', 'error'); return; }
+    
+    showLoading(true);
+    const newOrders = [];
+    for (let i = 0; i < count; i++) {
+      newOrders.push({
+        id: Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '_' + i,
+        factory: factory,
+        material: material,
+        time: '',
+        timestamp: new Date().toLocaleTimeString('ar-SA')
+      });
+    }
+    
+    let success = false;
+    if (deliveryDay === 'today') {
+      todayOrders = [...newOrders, ...todayOrders];
+      success = await saveTodayOrders();
+    } else {
+      tomorrowOrders = [...newOrders, ...tomorrowOrders];
+      success = await saveTomorrowOrders();
+    }
+    
+    if (success) {
+      renderOrders();
+      showToast(`✅ تم إضافة ${count} طلب`, 'success');
+    }
+    showLoading(false);
+  }
+  
+  async function deleteOrder(id, type) {
+    if (!hasDeleteOrders()) { showToast('❌ غير مصرح', 'error'); return; }
+    if (confirm('حذف هذا الطلب؟')) {
+      if (type === 'today') {
+        todayOrders = todayOrders.filter(o => o.id !== id);
+        await saveTodayOrders();
+      } else {
+        tomorrowOrders = tomorrowOrders.filter(o => o.id !== id);
+        await saveTomorrowOrders();
+      }
+      renderOrders();
+      showToast('✅ تم الحذف', 'success');
+    }
+  }
+  
+  function openEditOrderModal(id, type) {
+    if (!hasEditOrders()) { showToast('❌ غير مصرح', 'error'); return; }
+    let o = type === 'today' ? todayOrders.find(o => o.id === id) : tomorrowOrders.find(o => o.id === id);
+    if (!o) return;
+    document.getElementById('editOrderId').value = id;
+    document.getElementById('editOrderType').value = type;
+    document.getElementById('editOrderMaterial').value = o.material;
+    document.getElementById('editOrderTime').value = o.time || '';
+    openModal('editOrderModal');
+  }
+  
+  async function saveOrderEdit() {
+    let id = document.getElementById('editOrderId').value;
+    let type = document.getElementById('editOrderType').value;
+    let newMaterial = document.getElementById('editOrderMaterial').value;
+    let newTime = document.getElementById('editOrderTime').value;
+    
+    if (type === 'today') {
+      let idx = todayOrders.findIndex(o => o.id === id);
+      if (idx !== -1) {
+        todayOrders[idx].material = newMaterial;
+        todayOrders[idx].time = newTime;
+        await saveTodayOrders();
+      }
+    } else {
+      let idx = tomorrowOrders.findIndex(o => o.id === id);
+      if (idx !== -1) {
+        tomorrowOrders[idx].material = newMaterial;
+        tomorrowOrders[idx].time = newTime;
+        await saveTomorrowOrders();
+      }
+    }
+    renderOrders();
+    closeModal('editOrderModal');
+    showToast('✅ تم التعديل', 'success');
+  }
+  
+  // عرض الطلبات حسب التبويب النشط
+  function renderOrders() {
+    const displayOrders = currentTab === 'today' ? todayOrders : tomorrowOrders;
+    const container = document.getElementById(currentTab === 'today' ? 'todayOrders' : 'tomorrowOrders');
+    document.getElementById('ordersCount').textContent = displayOrders.length;
+    
+    if (!displayOrders.length) {
+      container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted);">📭 لا توجد طلبات</div>';
+      return;
+    }
+    
+    const canEdit = hasEditOrders();
+    const canDelete = hasDeleteOrders();
+    const isTomorrowTab = currentTab === 'tomorrow';
+    
+    container.innerHTML = displayOrders.map((o, idx) => `
+      <div class="order-card">
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <span class="order-number">${idx + 1}</span>
+          ${isTomorrowTab ? '<span class="tomorrow-badge">📆 غداً</span>' : ''}
+          ${currentUserRole !== 'client' ? `<span class="order-factory-badge">🏭 ${o.factory}</span>` : ''}
+          <span class="order-material-badge">📦 ${o.material}</span>
+          ${o.time ? `<span class="order-time">⏰ ${o.time}</span>` : ''}
+          <span class="order-time">🕐 ${o.timestamp || '—'}</span>
+        </div>
+        <div class="order-actions">
+          ${canEdit ? `<button class="btn soft btn-sm-compact" onclick="openEditOrderModal('${o.id}', '${currentTab}')">✏️</button>` : ''}
+          ${canDelete ? `<button class="btn danger btn-sm-compact" onclick="deleteOrder('${o.id}', '${currentTab}')">🗑️</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-compact').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.tab-compact[data-tab="${tab}"]`).classList.add('active');
+    document.getElementById('todayOrdersContainer').style.display = tab === 'today' ? 'block' : 'none';
+    document.getElementById('tomorrowOrdersContainer').style.display = tab === 'tomorrow' ? 'block' : 'none';
+    renderOrders();
+  }
+  
+  // توزيع يدوي - يوزع فقط طلبات اليوم، طلبات الغد تنتظر يومها
+  async function manualDistribute() {
+    if (!hasManageDistribution()) { showToast('❌ غير مصرح', 'error'); return; }
+    if (currentTab === 'tomorrow') {
+      showToast('⚠️ لا يمكن توزيع طلبات الغد الآن، انتظر حتى يحين يومها', 'info');
+      return;
+    }
+    if (!todayOrders.length) {
+      showToast('⚠️ لا توجد طلبات لليوم لتوزيعها', 'error');
+      return;
+    }
+    
+    showLoading(true);
+    try {
+      const response = await apiCall('/distribution/manual', 'POST', { date: currentDate });
+      if (response.success) {
+        showToast(`✅ تم توزيع ${todayOrders.length} طلب بنجاح`, 'success');
+        // إعادة تحميل البيانات لتحديث حالة التوزيع
+        await loadDayData();
+      } else {
+        showToast('❌ فشل في التوزيع', 'error');
+      }
+    } catch(e) { 
+      showToast('خطأ في التوزيع: ' + e.message, 'error'); 
+    }
+    showLoading(false);
+  }
+  
+  function exportOrdersToExcel() {
+    if (!hasExportReports()) { showToast('❌ غير مصرح', 'error'); return; }
+    const displayOrders = currentTab === 'today' ? todayOrders : tomorrowOrders;
+    if (!displayOrders.length) { showToast('لا توجد طلبات', 'error'); return; }
+    const data = displayOrders.map((o, i) => ({
+      '#': i+1, 
+      'المصنع': o.factory, 
+      'نوع البحص': o.material,
+      'التوقيت': o.time || '', 
+      'وقت الإضافة': o.timestamp || '—',
+      'نوع الطلب': currentTab === 'today' ? 'اليوم' : 'الغد'
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الطلبات');
+    XLSX.writeFile(wb, `طلبات_${currentTab}_${currentDate}.xlsx`);
+    showToast('✅ تم التصدير', 'success');
+  }
+  
+  function showToast(msg, type) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:3000;display:flex;flex-direction:column;gap:8px;';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
+    toast.style.cssText = `background:${bgColor};color:white;padding:0.5rem 1rem;border-radius:8px;font-size:0.8rem;animation:slideIn 0.3s ease;`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+  
+  function showLoading(show) {
+    let loader = document.getElementById('globalLoader');
+    if (!loader && show) {
+      loader = document.createElement('div');
+      loader.id = 'globalLoader';
+      loader.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+      loader.innerHTML = '<div style="background:white;padding:1rem;border-radius:50%;">⏳</div>';
+      document.body.appendChild(loader);
+    }
+    if (loader) loader.style.display = show ? 'flex' : 'none';
+  }
+  
+  function openModal(id) { document.getElementById(id).classList.add('active'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+  
+  // تهيئة الصفحة
+  document.addEventListener('DOMContentLoaded', async () => {
+    const authorized = await loadCurrentUser();
+    if (!authorized) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('orderDate').value = today;
+    await loadSettings();
+    await loadDayData();
+    
+    document.getElementById('addOrderBtn').onclick = addOrder;
+    document.getElementById('manualDistributeBtn').onclick = manualDistribute;
+    document.getElementById('exportExcelBtn').onclick = exportOrdersToExcel;
+    document.getElementById('orderDate').onchange = loadDayData;
+    document.getElementById('saveEditBtn').onclick = saveOrderEdit;
+    
+    document.querySelectorAll('.tab-compact').forEach(tab => {
+      tab.onclick = () => switchTab(tab.getAttribute('data-tab'));
+    });
+    
+    // تعريف الدوال globally
+    window.deleteOrder = deleteOrder;
+    window.quickAdd = quickAdd;
+    window.openEditOrderModal = openEditOrderModal;
+    window.closeModal = closeModal;
+  });
+</script>

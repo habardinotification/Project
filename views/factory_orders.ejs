@@ -1,0 +1,122 @@
+<%
+  const currentFactory = typeof factory !== 'undefined' ? factory : null;
+  const currentFactories = typeof factories !== 'undefined' ? factories : [];
+  const ordersList = typeof factoryOrders !== 'undefined'
+    ? factoryOrders
+    : (typeof orders !== 'undefined' ? orders : []);
+%>
+
+<section class="factory-page">
+
+  <div class="factory-hero">
+    <div>
+      <span class="eyebrow">بوابة المصنع</span>
+      <h2><%= currentFactory ? currentFactory.name : 'مصنع' %></h2>
+
+      <% if (currentFactory) { %>
+        <p>
+          المسافة من الكسارة:
+          <b><%= currentFactory.distance_km || 0 %> كم</b>
+          —
+          المدينة:
+          <b><%= currentFactory.city || '-' %></b>
+        </p>
+      <% } else { %>
+        <p>اختر المصنع أو أضف طلبًا جديدًا.</p>
+      <% } %>
+    </div>
+
+    <a class="btn danger soft" href="/logout">تسجيل خروج</a>
+  </div>
+
+  <div class="factory-form-card">
+    <h2>طلب بحص جديد</h2>
+
+    <form class="factory-form" method="POST" action="/factory_orders">
+      <label class="form-field">
+        المصنع
+        <select name="factory_id">
+          <% if (currentFactories.length === 0) { %>
+            <option value="">لا توجد مصانع</option>
+          <% } %>
+
+          <% currentFactories.forEach(function(item) { %>
+            <option value="<%= item.id %>" <%= currentFactory && currentFactory.id === item.id ? 'selected' : '' %>>
+              <%= item.name %>
+            </option>
+          <% }); %>
+        </select>
+      </label>
+
+      <label class="form-field">
+        نوع البحص
+        <select name="gravel_type" required>
+          <option value="">اختار النوع</option>
+          <option value="بحص 3/8">بحص 3/8</option>
+          <option value="بحص 3/4">بحص 3/4</option>
+          <option value="بحص 1/2">بحص 1/2</option>
+          <option value="رمل">رمل</option>
+          <option value="مخلوط">مخلوط</option>
+        </select>
+      </label>
+
+      <label class="form-field">
+        الوقت المطلوب
+        <input type="datetime-local" name="required_at">
+      </label>
+
+      <label class="form-field">
+        الكمية / عدد الردود
+        <input type="number" name="quantity" min="1" value="1">
+      </label>
+
+      <label class="form-field full">
+        ملاحظات
+        <input type="text" name="notes" placeholder="اختياري">
+      </label>
+
+      <div class="form-actions">
+        <button class="primary" type="submit">إرسال الطلب</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="factory-orders-card">
+    <h2>طلبات المصنع</h2>
+
+    <% if (!ordersList || ordersList.length === 0) { %>
+      <div class="no-data">
+        لا توجد طلبات لهذا المصنع.
+      </div>
+    <% } else { %>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>النوع</th>
+              <th>الوقت</th>
+              <th>الحالة</th>
+              <th>السيارة</th>
+              <th>ملاحظات</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <% ordersList.forEach(function(order, index) { %>
+              <tr>
+                <td><%= index + 1 %></td>
+                <td><%= order.gravel_type || order.type || '-' %></td>
+                <td><%= order.required_at || order.created_at || '-' %></td>
+                <td><%= order.status || 'جديد' %></td>
+                <td><%= order.truck_number || order.truck || '-' %></td>
+                <td><%= order.notes || '-' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+
+</section>

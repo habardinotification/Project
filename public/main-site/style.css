@@ -1,0 +1,774 @@
+/* ==============================================
+   style.css - الملف الرئيسي لموقع كسارة الحبردي
+   نظام الألوان الداكن (مستوحى من الموقع الفرعي)
+   ============================================== */
+
+/* ----------------------------------------------
+   الأساسيات والمتغيرات
+   ---------------------------------------------- */
+:root {
+    --bg-gradient-start: #1a1a2e;
+    --bg-gradient-end: #16213e;
+    --primary-gradient-start: #667eea;
+    --primary-gradient-end: #764ba2;
+    --accent-gold: #c9a03d;
+    --accent-pink: #f093fb;
+    --success-green: #11998e;
+    --success-green-dark: #0e7a6e;
+    --danger-red: #eb3349;
+    --text-light: #ffffff;
+    --text-muted: #cdd9ff;
+    --text-soft: #eef2ff;
+    --card-bg: rgba(255, 255, 255, 0.08);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --glass-effect: blur(8px);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+    color: var(--text-light);
+    line-height: 1.6;
+    position: relative;
+    min-height: 100vh;
+    overflow-x: auto;
+}
+
+/* خلفية زخرفية خفيفة (لوجو مائي شفاف) */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='none'/%3E%3Cpath d='M80,280 L130,180 L190,220 L260,160 L300,200 L320,170 L350,210 L340,280 L80,280 Z' fill='%23667eea' opacity='0.03' stroke='%23764ba2' stroke-width='2'/%3E%3Crect x='150' y='230' width='140' height='50' rx='10' fill='%23764ba2' opacity='0.03'/%3E%3Ctext x='200' y='350' font-size='48' fill='%23667eea' opacity='0.04' text-anchor='middle' font-weight='800'%3Eزرعة الخير%3C/text%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 280px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* الحاوية الرئيسية */
+.wrapper {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 1300px;
+    max-width: 95%;
+    margin: 0 auto;
+    background-color: transparent;
+}
+
+/* ----------------------------------------------
+   الرأس (Header)
+   ---------------------------------------------- */
+header {
+    background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+    color: white;
+    padding: 1rem 2rem;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    border-bottom: 3px solid var(--accent-pink);
+    border-radius: 0 0 20px 20px;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.header-container {
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.graphic-logo svg {
+    width: 65px;
+    height: 65px;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+    background: rgba(255,255,255,0.1);
+    border-radius: 28px;
+    padding: 5px;
+    transition: transform 0.2s;
+}
+
+.graphic-logo svg:hover {
+    transform: scale(1.03);
+}
+
+.company-title h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 0.2rem;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+}
+
+.company-title p {
+    font-size: 0.9rem;
+    color: #f3e8ff;
+    font-weight: 500;
+}
+
+/* ----------------------------------------------
+   تخطيط الصفحة (القسم الرئيسي)
+   ---------------------------------------------- */
+.main-layout {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    margin: 2rem 0;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+/* ----------------------------------------------
+   القائمة الجانبية (Side Navigation) - زجاجية داكنة
+   ---------------------------------------------- */
+.side-nav {
+    flex: 0 0 auto;
+    width: 280px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: var(--glass-effect);
+    border-radius: 32px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    padding: 1.5rem 0.8rem;
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+    align-self: flex-start;
+    border: 1px solid var(--card-border);
+}
+
+.side-nav ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.side-nav li a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0.9rem 1.2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #f0f0f0;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 60px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    border: 1px solid transparent;
+}
+
+.side-nav li a i {
+    width: 28px;
+    font-size: 1.2rem;
+    color: var(--accent-pink);
+}
+
+.side-nav li a.active {
+    background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+    color: white;
+    font-weight: 800;
+    box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+    border-color: rgba(255,255,255,0.2);
+}
+
+.side-nav li a.active i {
+    color: #ffffff;
+}
+
+.side-nav li a.btn-attention {
+    background: var(--success-green);
+    color: white;
+    border: 1px solid var(--accent-pink);
+    margin-top: 0.8rem;
+}
+
+.side-nav li a.btn-attention i {
+    color: #ffefb9;
+}
+
+.side-nav li a.btn-attention:hover {
+    background: var(--success-green-dark);
+    transform: translateX(-5px);
+}
+
+.side-nav li a:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateX(-5px);
+}
+
+/* تأثير الوميض الذهبي لرابط "منصة الطلبات" */
+.golden-blink {
+    animation: softGoldPulse 1.5s ease-in-out infinite;
+    border-radius: 60px;
+    background: rgba(201, 160, 61, 0.1) !important;
+    box-shadow: 0 0 8px rgba(201, 160, 61, 0.4);
+}
+
+@keyframes softGoldPulse {
+    0% {
+        background-color: rgba(201, 160, 61, 0.05);
+        box-shadow: 0 0 0px rgba(201, 160, 61, 0.2);
+        text-shadow: 0 0 0px rgba(255, 215, 0, 0);
+    }
+    50% {
+        background-color: rgba(201, 160, 61, 0.25);
+        box-shadow: 0 0 12px rgba(201, 160, 61, 0.6);
+        text-shadow: 0 0 4px rgba(255, 215, 0, 0.3);
+    }
+    100% {
+        background-color: rgba(201, 160, 61, 0.05);
+        box-shadow: 0 0 0px rgba(201, 160, 61, 0.2);
+        text-shadow: 0 0 0px rgba(255, 215, 0, 0);
+    }
+}
+
+.golden-blink:hover {
+    animation: none;
+    background: var(--accent-gold) !important;
+    color: #0a2f1a !important;
+    box-shadow: 0 6px 12px rgba(201, 160, 61, 0.5);
+}
+
+/* ----------------------------------------------
+   المحتوى الرئيسي
+   ---------------------------------------------- */
+.main-content {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(4px);
+    border-radius: 32px;
+    padding: 1.8rem 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--card-border);
+}
+
+.page-header {
+    margin-bottom: 2rem;
+    border-right: 6px solid var(--accent-pink);
+    padding-right: 1.2rem;
+}
+
+.page-header h1 {
+    font-size: 2.4rem;
+    color: var(--text-light);
+    font-weight: 800;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.page-header p {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+}
+
+/* ----------------------------------------------
+   البطاقات العامة (Cards)
+   ---------------------------------------------- */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.card {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 28px;
+    transition: 0.2s;
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(2px);
+}
+
+.card h3 {
+    color: var(--accent-pink);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.card p {
+    color: var(--text-soft);
+}
+
+.card:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-5px);
+    border-color: var(--primary-gradient-start);
+}
+
+/* بطاقات المنتجات (product-card) */
+.product-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(4px);
+    border-radius: 28px;
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+    transition: 0.2s;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-5px);
+    border-color: var(--primary-gradient-start);
+}
+
+.product-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-bottom: 1px solid var(--card-border);
+}
+
+.product-card h3 {
+    margin: 1rem 1rem 0.5rem;
+    color: var(--accent-pink);
+    font-weight: 800;
+    font-size: 1.3rem;
+}
+
+.product-card p {
+    margin: 0 1rem 1rem;
+    color: var(--text-soft);
+    line-height: 1.5;
+}
+
+/* ----------------------------------------------
+   الأزرار
+   ---------------------------------------------- */
+.btn-custom, .btn-primary, .btn-success-like {
+    display: inline-block;
+    padding: 10px 24px;
+    border-radius: 40px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: 0.2s;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    background: var(--success-green);
+    color: white;
+    margin-top: 1rem;
+}
+
+.btn-custom:hover, .btn-primary:hover, .btn-success-like:hover {
+    background: var(--success-green-dark);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
+}
+
+.btn-outline-light {
+    display: inline-block;
+    padding: 10px 24px;
+    border-radius: 40px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: 0.2s;
+    border: 2px solid var(--accent-pink);
+    color: var(--accent-pink);
+    background: transparent;
+}
+
+.btn-outline-light:hover {
+    background: var(--accent-pink);
+    color: var(--bg-gradient-start);
+    border-color: var(--accent-pink);
+}
+
+.btn-danger {
+    background: var(--danger-red);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c41e3a;
+}
+
+/* ----------------------------------------------
+   نماذج الإدخال (Forms)
+   ---------------------------------------------- */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: var(--accent-pink);
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 40px;
+    font-family: inherit;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transition: 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent-pink);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+input::placeholder, textarea::placeholder {
+    color: rgba(255,255,255,0.5);
+}
+
+textarea {
+    border-radius: 24px;
+    resize: vertical;
+}
+
+select option {
+    background: var(--bg-gradient-start);
+    color: white;
+}
+
+/* رفع الملفات */
+.file-input {
+    border: 1px dashed var(--accent-pink);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 40px;
+    padding: 0.6rem 1rem;
+    color: var(--text-muted);
+}
+
+.file-input::-webkit-file-upload-button {
+    background: var(--success-green);
+    border: none;
+    border-radius: 30px;
+    color: white;
+    padding: 0.3rem 1rem;
+    cursor: pointer;
+}
+
+small {
+    display: block;
+    margin-top: 0.3rem;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+/* ----------------------------------------------
+   أقسام إضافية (Hero, Stats, Contact, Job)
+   ---------------------------------------------- */
+.hero {
+    background: linear-gradient(135deg, #1e2a3a, #0f1724);
+    padding: 80px 20px;
+    text-align: center;
+    color: var(--text-light);
+    border-radius: 32px;
+    margin-bottom: 2rem;
+    border: 1px solid var(--card-border);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: "\f0d1";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    bottom: -30px;
+    left: -30px;
+    font-size: 200px;
+    opacity: 0.05;
+    color: var(--accent-gold);
+    pointer-events: none;
+}
+
+.hero::after {
+    content: "\f2b5";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    font-size: 220px;
+    opacity: 0.04;
+    color: var(--accent-pink);
+    pointer-events: none;
+}
+
+.hero h2 {
+    font-size: 2.8rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    position: relative;
+    z-index: 1;
+}
+
+.hero p {
+    font-size: 1.2rem;
+    max-width: 750px;
+    margin: 0 auto 35px;
+    color: var(--text-soft);
+    position: relative;
+    z-index: 1;
+}
+
+.stats {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: var(--glass-effect);
+    color: white;
+    padding: 55px 20px;
+    text-align: center;
+    border-radius: 32px;
+    margin-top: 1rem;
+    border: 1px solid var(--card-border);
+}
+
+.stats-container {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 30px;
+}
+
+.stats div h3 {
+    font-size: 2.8rem;
+    color: var(--accent-pink);
+    margin-bottom: 8px;
+}
+
+.stats div p {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* بطاقات التواصل (contact-card) */
+.contact-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.contact-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(4px);
+    padding: 1.5rem;
+    border-radius: 28px;
+    text-align: center;
+    border: 1px solid var(--card-border);
+    transition: 0.2s;
+}
+
+.contact-card:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-5px);
+    border-color: var(--primary-gradient-start);
+}
+
+.contact-card i {
+    font-size: 2.5rem;
+    color: var(--accent-pink);
+    margin-bottom: 0.5rem;
+}
+
+.contact-card h3 {
+    color: var(--accent-pink);
+    margin-bottom: 0.5rem;
+}
+
+.contact-card p a {
+    color: var(--text-soft);
+    text-decoration: none;
+    transition: 0.2s;
+}
+
+.contact-card p a:hover {
+    color: var(--accent-pink);
+}
+
+/* بطاقات الخريطة */
+.maps-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.map-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(4px);
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+    transition: 0.2s;
+}
+
+.map-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--primary-gradient-start);
+}
+
+.map-card h3 {
+    background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+    color: white;
+    padding: 0.7rem;
+    margin: 0;
+    text-align: center;
+    font-weight: 700;
+}
+
+.map-card iframe {
+    width: 100%;
+    height: 200px;
+    border: none;
+}
+
+.map-address {
+    padding: 0.7rem;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--text-muted);
+}
+
+.map-link {
+    display: inline-block;
+    background: var(--success-green);
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 30px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 0.7rem;
+    transition: 0.2s;
+}
+
+.map-link:hover {
+    background: var(--success-green-dark);
+    transform: scale(1.02);
+}
+
+/* قسم التوظيف (job-section) */
+.job-section {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px);
+    border-radius: 32px;
+    padding: 2rem;
+    margin: 0 auto;
+    border: 1px solid var(--card-border);
+    max-width: 650px;
+    width: 100%;
+}
+
+.job-section h2 {
+    font-size: 1.8rem;
+    color: var(--accent-pink);
+    border-right: 5px solid var(--accent-pink);
+    padding-right: 1rem;
+    margin-bottom: 1.5rem;
+    font-weight: 800;
+}
+
+.job-intro p {
+    color: var(--text-soft);
+    margin-bottom: 1.5rem;
+}
+
+.benefits {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 24px;
+    padding: 1rem;
+    margin-top: 2rem;
+    text-align: center;
+    color: var(--text-soft);
+    font-size: 0.9rem;
+}
+
+.benefits i {
+    color: var(--accent-pink);
+    margin: 0 0.2rem;
+}
+
+/* ----------------------------------------------
+   التذييل (Footer)
+   ---------------------------------------------- */
+footer {
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+    color: #bbccff;
+    text-align: center;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    font-size: 0.9rem;
+    border-top: 1px solid var(--card-border);
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+}
+
+/* ----------------------------------------------
+   التوافق مع الشاشات الصغيرة (Responsive)
+   ---------------------------------------------- */
+@media (max-width: 900px) {
+    .main-layout {
+        flex-direction: column;
+    }
+    .side-nav {
+        width: 100%;
+        position: static;
+    }
+    .header-container {
+        flex-direction: column;
+        text-align: center;
+    }
+    .company-title h1, .company-title p {
+        white-space: normal;
+    }
+    .hero h2 {
+        font-size: 2rem;
+    }
+    .stats div h3 {
+        font-size: 2rem;
+    }
+    .hero {
+        padding: 50px 15px;
+    }
+    .hero::before, .hero::after {
+        font-size: 120px;
+    }
+    .cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ----------------------------------------------
+   أدوات مساعدة إضافية
+   ---------------------------------------------- */
+.text-center { text-align: center; }
+.mt-2 { margin-top: 1rem; }
+.mb-2 { margin-bottom: 1rem; }
+.rtl { direction: rtl; }

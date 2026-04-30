@@ -1,0 +1,531 @@
+<!-- views/scale_report.ejs - النسخة النهائية المحسنة (حفظ تلقائي، تحديد باللمس، دمج ذكي، إكسل فاخر) -->
+<style>
+  /* تحسينات المظهر */
+  .scale-container { 
+    background: var(--bg-card);
+    border-radius: 1rem;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .settings-row { background: var(--bg-sidebar); padding: 0.8rem; border-radius: 0.8rem; margin-bottom: 1rem; }
+  .vacation-control { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: flex-end; }
+  .upload-field label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.2rem; display: block; }
+  .upload-field input, .upload-field select { padding: 0.3rem 0.6rem; font-size: 0.8rem; border-radius: 0.5rem; border: 1px solid var(--border-color); background: var(--bg-card); width: 100%; }
+  .btn { padding: 0.3rem 0.9rem; font-size: 0.75rem; border-radius: 2rem; cursor: pointer; transition: all 0.2s; }
+  .btn-primary { background: var(--primary); color: white; border: none; }
+  .btn-soft { background: var(--bg-sidebar); border: 1px solid var(--border-color); }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.8rem; margin: 1rem 0; }
+  .stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.8rem; padding: 0.6rem; text-align: center; transition: transform 0.1s; }
+  .stat-value { font-size: 1.3rem; font-weight: 800; color: var(--primary); }
+  .stat-label { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; }
+  .charts-row { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
+  .chart-card { flex: 1; min-width: 250px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.8rem; padding: 0.6rem; }
+  .chart-title { font-weight: bold; text-align: center; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--primary); }
+  .chart-wrap { height: 220px; }
+  .driver-table { overflow-x: auto; margin: 1rem 0; }
+  .driver-table table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
+  .driver-table th, .driver-table td { border: 1px solid var(--border-color); padding: 0.4rem; text-align: center; }
+  .driver-table th { background: var(--bg-sidebar); font-weight: bold; }
+  .reports-section { background: var(--bg-sidebar); border-radius: 0.8rem; padding: 0.8rem; margin: 1rem 0; }
+  .reports-grid { display: flex; flex-wrap: wrap; gap: 0.8rem; max-height: 200px; overflow-y: auto; margin: 0.8rem 0; }
+  .report-card { 
+    background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 0.8rem; padding: 0.5rem 0.8rem; 
+    min-width: 160px; cursor: pointer; transition: all 0.2s; position: relative;
+  }
+  .report-card.selected { 
+    border-color: var(--primary); background: rgba(var(--primary-rgb), 0.1); 
+    box-shadow: 0 0 0 2px var(--primary);
+  }
+  .report-card::after {
+    content: "✓";
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    background: var(--primary);
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .report-card.selected::after { opacity: 1; }
+  .report-name { font-weight: bold; display: block; font-size: 0.85rem; }
+  .report-date { font-size: 0.65rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem; }
+  .report-actions { display: flex; gap: 0.3rem; margin-top: 0.3rem; justify-content: center; }
+  .report-actions button { background: transparent; border: none; cursor: pointer; font-size: 0.8rem; padding: 0.2rem; }
+  .view-report-btn { background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 2rem; padding: 0.2rem 0.5rem; font-size: 0.7rem; cursor: pointer; margin-top: 0.3rem; width: 100%; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+  .status { background: rgba(17,153,142,0.1); border-right: 4px solid var(--success); padding: 0.5rem; border-radius: 0.5rem; margin: 0.5rem 0; font-size: 0.75rem; }
+  .honor-card { background: linear-gradient(135deg, #f9a825, #ffd54f); padding: 0.8rem; border-radius: 1rem; text-align: center; margin: 0.8rem 0; color: #2c3e2f; }
+  .honor-list { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 0.5rem; }
+  .honor-item { background: rgba(255,255,255,0.9); border-radius: 2rem; padding: 0.3rem 1rem; font-weight: bold; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+  .honor-gold { background: gold; color: #5c3e00; }
+  .honor-silver { background: silver; color: #2c3e2f; }
+  .honor-bronze { background: #cd7f32; color: white; }
+  @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr 1fr; } .reports-grid { justify-content: center; } }
+</style>
+
+<div class="scale-container">
+  <div class="section-head"><h2>⚖️ تقارير الميزان الشهرية</h2><span class="pill">تحليل - حفظ تلقائي - دمج ذكي</span></div>
+
+  <div class="settings-row">
+    <div class="vacation-control">
+      <div class="upload-field"><label>📅 أيام الشهر</label><input type="number" id="monthDays" min="28" max="31" value="30" step="1"></div>
+      <div class="upload-field"><label>📅 أيام الإجازات</label><input type="number" id="officialVacations" min="0" max="31" value="4" step="1"></div>
+      <button class="btn btn-soft" id="applyRodaCalc">🔄 إعادة حساب الرودات</button>
+    </div>
+  </div>
+
+  <div class="flex-between" style="margin-bottom: 0.8rem;">
+    <div style="flex:2; min-width:180px;"><label>📂 رفع ملف Excel</label><input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls" class="form-control"></div>
+    <div style="flex:1; min-width:150px;"><label>📄 اسم التصدير</label><input type="text" id="outputName" value="تقرير_الميزان.xlsx" class="form-control"></div>
+    <div><button class="btn btn-primary" id="exportAdvancedBtn">📥 تصدير متقدم (10 أوراق)</button></div>
+  </div>
+
+  <div id="statusMsg" class="status">✅ انتظار رفع ملف أو اختيار تقارير للدمج...</div>
+
+  <div class="reports-section">
+    <div class="flex-between">
+      <div class="chart-title">📚 التقارير المحفوظة (اختر للدمج)</div>
+      <div><button class="btn btn-soft" id="mergeReportsBtn" style="padding:0.2rem 0.8rem;">🔗 دمج المحددة</button>
+      <button class="btn btn-soft" id="clearSelectionBtn" style="padding:0.2rem 0.8rem;">🗑️ إلغاء الكل</button></div>
+    </div>
+    <div id="savedReportsList" class="reports-grid">جاري التحميل...</div>
+    <div class="flex-between" style="margin-top:0.5rem;"><div></div><div class="muted" style="font-size:0.65rem;">💡 اضغط على أي تقرير لتحديده (بدون مربع)</div></div>
+  </div>
+
+  <div id="metricsGrid" class="stats-grid" style="display:none;"></div>
+  <div id="chartsArea" style="display:none;">
+    <div class="charts-row">
+      <div class="chart-card"><div class="chart-title">📦 الأوزان حسب نوع البحص</div><div class="chart-wrap"><canvas id="materialChart"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">🏆 أعلى 10 سائقين بالرحلات</div><div class="chart-wrap"><canvas id="topDriversChart"></canvas></div></div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card"><div class="chart-title">🌟 أعلى 5 نسب إنجاز للرودات</div><div class="chart-wrap"><canvas id="topRodaChart"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">⚠️ أقل 5 نسب إنجاز للرودات</div><div class="chart-wrap"><canvas id="bottomRodaChart"></canvas></div></div>
+    </div>
+    <div class="honor-card" id="honorSection" style="display:none;">
+      <h3 style="font-size:0.9rem;">🏅 تكريم السائقين المتميزين</h3>
+      <div id="honorList" class="honor-list"></div>
+    </div>
+    <div class="driver-table">
+      <div class="chart-title">🚛 تفاصيل السائقين + الرودات والنسبة</div>
+      <div class="table-wrap">
+        <table id="driverTable">
+          <thead><tr><th>السائق</th><th>الرحلات</th><th>الوزن (طن)</th><th>أيام العمل الفعلية</th><th>الرودات المطلوبة</th><th>النسبة %</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  // ========== بيانات الشاحنات الصالحة (نفس السابق) ==========
+  const VALID_TRUCKS = new Map([
+    ["1091","SDA"],["2757","BTA"],["2758","BTA"],["2759","BTA"],["2760","BTA"],["2762","BTA"],["2818","BTA"],["2927","BTA"],
+    ["2928","BTA"],["2929","BTA"],["3321","UXA"],["3322","UXA"],["3324","UXA"],["3325","UXA"],["3326","UXA"],["3461","KXA"],
+    ["3462","KXA"],["3963","TSA"],["4445","GSA"],["5324","SXA"],["5367","KRA"],["5520","XXA"],["5521","XXA"],["5522","XXA"],
+    ["5523","XXA"],["5524","XXA"],["5525","XXA"],["5526","XXA"],["5527","XXA"],["5528","XXA"],["5658","SXA"],["5796","VRA"],
+    ["5797","VRA"],["5800","VRA"],["6398","ERA"],["6428","TRA"],["6429","TRA"],["6430","TRA"],["6432","TRA"],["6612","DSA"],
+    ["6613","DSA"],["6614","DSA"],["6615","DSA"],["6616","DSA"],["6617","DSA"],["6618","DSA"],["6619","DSA"],["6620","DSA"],
+    ["6621","DSA"],["6622","DSA"],["6623","DSA"],["6624","DSA"],["6626","DSA"],["6629","DSA"],["6935","GSA"],["6939","GSA"],
+    ["7042","ZXA"],["7043","ZXA"],["7332","DXA"],["7682","DXA"],["7750","DXA"],["7837","DXA"],["7926","DXA"],["7927","DXA"],
+    ["7928","DXA"],["7929","DXA"],["7930","DXA"],["7974","DXA"],["7980","DXA"],["9103","HSA"],["9492","SXA"],["9493","SXA"],
+    ["9495","SXA"],["9496","SXA"]
+  ]);
+  const EXCLUDED_NAMES = new Set(["eisam خ","eisam ح","عادل خ","عادل ح","mamoon","zeshan","برهان","ابراهيم"]);
+
+  // ========== متغيرات ==========
+  let currentResult = null;
+  let currentDriversWithDetails = [];
+  let currentMonthDays = 30, currentOfficialVacations = 4;
+  let savedReports = [];
+  let selectedReportIds = new Set();
+  const STORAGE_KEY = 'scale_reports_final_v2';
+  let charts = { material: null, topDrivers: null, topRoda: null, bottomRoda: null };
+
+  // ========== دوال مساعدة ==========
+  function showToast(msg, type) { /* كما هي */ 
+    let c = document.getElementById('toastContainer');
+    if(!c){ c = document.createElement('div'); c.id = 'toastContainer'; c.style.cssText = 'position:fixed;top:70px;left:20px;z-index:3000'; document.body.appendChild(c); }
+    let t = document.createElement('div'); t.className = `toast ${type}`; t.innerText = msg; t.style.cssText = 'background:var(--bg-card);border-right:4px solid var(--primary);padding:0.5rem 1rem;margin-top:0.5rem;border-radius:0.5rem;font-size:0.75rem;box-shadow:0 2px 5px rgba(0,0,0,0.1);';
+    c.appendChild(t); setTimeout(() => t.remove(), 3000);
+  }
+  function showLoading(show) { let l = document.getElementById('globalLoader'); if(show) { if(!l) { l = document.createElement('div'); l.id = 'globalLoader'; l.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999'; l.innerHTML = '<div class="spinner"></div>'; document.body.appendChild(l); } } else if(l) l.remove(); }
+  function keepDigitsOnly(v) { const ad = {"٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9"}; let t = String(v??"").replace(/[٠-٩]/g, d=>ad[d]); let m = t.match(/\d+/g); return m ? m.join("") : ""; }
+  function extractTruckCode(text) { let m = String(text).match(/[A-Z]{2,4}/); return m ? m[0] : ''; }
+  function isTruckValid(truckNumber, truckCode) { let expected = VALID_TRUCKS.get(truckNumber); if(!expected) return false; if(truckCode && truckCode.trim()) return expected === truckCode.trim(); return true; }
+
+  // ========== معالجة ملف Excel ==========
+  async function processExcelFile(file) {
+    let buf = await file.arrayBuffer();
+    let wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+    let sheet = wb.worksheets[0];
+    let rows = [];
+    sheet.eachRow({includeEmpty:true}, (row)=> rows.push(row.values.slice(1).map(v=>v??"")));
+    return processData(rows);
+  }
+  function processData(rows) {
+    let matched=0, notMatched=0, total=0;
+    const truckStats = new Map();
+    const materialStats = new Map();
+    for(let i=1; i<rows.length; i++) {
+      let row = (rows[i]||[]).slice();
+      if(!row.some(v=>v!==null && v!==undefined && v!=="")) continue;
+      total++;
+      let truckRaw = String(row[4]??"");
+      let cleanedTruck = keepDigitsOnly(truckRaw);
+      let truckCode = extractTruckCode(truckRaw);
+      let driverName = String(row[3]??"").trim();
+      let weight = parseFloat(row[11]) || 0;
+      let materialName = (()=>{ const m={"46089":"3/8","46085":"3/4","46097":"3/16"}; return m[String(row[5]??"").trim()] || String(row[5]??"").trim(); })();
+      if(row.some(c=>EXCLUDED_NAMES.has(String(c).trim().toLowerCase()))) { notMatched++; continue; }
+      if(isTruckValid(cleanedTruck, truckCode)){
+        matched++;
+        let key = cleanedTruck;
+        if(!truckStats.has(key)) truckStats.set(key, { driver: driverName || key, trips: 0, weight: 0 });
+        let rec = truckStats.get(key);
+        rec.trips++;
+        rec.weight += weight;
+        if(materialName) materialStats.set(materialName, (materialStats.get(materialName)||0) + weight);
+      } else notMatched++;
+    }
+    let driversArr = Array.from(truckStats.entries()).map(([truckNum,data])=> ({ name: data.driver, truckNumber: truckNum, trips: data.trips, totalWeight: data.weight })).sort((a,b)=>b.trips - a.trips);
+    let materialsArr = Array.from(materialStats.entries()).map(([n,w])=> ({ name: n, weight: w })).sort((a,b)=>b.weight - a.weight);
+    let totalWeightAll = materialsArr.reduce((s,m)=>s+m.weight,0);
+    return { matchedCount:matched, notMatchedCount:notMatched, totalRows:total, driversStats:driversArr, materialsStats:materialsArr, totalWeightAll };
+  }
+
+  function calculateRoda(driversList, monthDays, officialVac) {
+    let workDays = Math.max(0, monthDays - officialVac);
+    let required = workDays * 2;
+    return driversList.map(d => ({
+      ...d,
+      workDays: workDays,
+      requiredRoda: required,
+      percentage: required > 0 ? Math.min(100, (d.trips/required)*100).toFixed(2) : 0
+    }));
+  }
+
+  function renderVisuals(data, driversDetails) {
+    if(!data) return;
+    document.getElementById("metricsGrid").innerHTML = `
+      <div class="stat-card"><div class="stat-value">${data.totalRows}</div><div class="stat-label">إجمالي الصفوف</div></div>
+      <div class="stat-card"><div class="stat-value">${data.matchedCount}</div><div class="stat-label">رحلاتنا</div></div>
+      <div class="stat-card"><div class="stat-value">${data.notMatchedCount}</div><div class="stat-label">غير تابعة</div></div>
+      <div class="stat-card"><div class="stat-value">${data.totalRows?((data.matchedCount/data.totalRows)*100).toFixed(2):0}%</div><div class="stat-label">نسبة الإنجاز</div></div>
+      <div class="stat-card"><div class="stat-value">${data.driversStats.length}</div><div class="stat-label">عدد السائقين</div></div>
+      <div class="stat-card"><div class="stat-value">${(data.totalWeightAll/1000).toFixed(1)} طن</div><div class="stat-label">إجمالي الوزن</div></div>
+    `;
+    if(charts.material) charts.material.destroy();
+    let topMats = data.materialsStats.slice(0,8);
+    charts.material = new Chart(document.getElementById("materialChart"), { type:"bar", data:{ labels:topMats.map(m=>m.name), datasets:[{ label:"الوزن (كجم)", data:topMats.map(m=>m.weight), backgroundColor:"rgba(54,162,235,0.7)" }] }, options:{ responsive:true, maintainAspectRatio:true } });
+    if(charts.topDrivers) charts.topDrivers.destroy();
+    let top10 = data.driversStats.slice(0,10);
+    charts.topDrivers = new Chart(document.getElementById("topDriversChart"), { type:"bar", data:{ labels:top10.map(d=>d.name), datasets:[{ label:"الرحلات", data:top10.map(d=>d.trips), backgroundColor:"rgba(75,192,192,0.7)" }] }, options:{ responsive:true, maintainAspectRatio:true, indexAxis:'y' } });
+    let sorted = [...driversDetails].sort((a,b)=>parseFloat(b.percentage)-parseFloat(a.percentage));
+    let top5 = sorted.slice(0,5);
+    let bottom5 = sorted.slice(-5).reverse();
+    if(charts.topRoda) charts.topRoda.destroy();
+    charts.topRoda = new Chart(document.getElementById("topRodaChart"), { type:"bar", data:{ labels:top5.map(d=>d.name), datasets:[{ label:"النسبة %", data:top5.map(d=>parseFloat(d.percentage)), backgroundColor:"rgba(46,204,113,0.7)" }] }, options:{ responsive:true } });
+    if(charts.bottomRoda) charts.bottomRoda.destroy();
+    charts.bottomRoda = new Chart(document.getElementById("bottomRodaChart"), { type:"bar", data:{ labels:bottom5.map(d=>d.name), datasets:[{ label:"النسبة %", data:bottom5.map(d=>parseFloat(d.percentage)), backgroundColor:"rgba(231,76,60,0.7)" }] }, options:{ responsive:true } });
+    // تكريم
+    let honorDiv = document.getElementById("honorSection");
+    let honorList = document.getElementById("honorList");
+    if(top5.length){
+      honorDiv.style.display = "block";
+      honorList.innerHTML = top5.map((d,idx)=>{
+        let medal = idx===0?"🥇":(idx===1?"🥈":(idx===2?"🥉":"🏅"));
+        let cls = idx===0?"honor-gold":(idx===1?"honor-silver":(idx===2?"honor-bronze":""));
+        return `<div class="honor-item ${cls}">${medal} ${d.name} (${d.percentage}%)</div>`;
+      }).join('');
+    } else honorDiv.style.display = "none";
+    // جدول
+    let tbody = document.querySelector("#driverTable tbody");
+    tbody.innerHTML = "";
+    for(let d of driversDetails){
+      let tr = tbody.insertRow();
+      tr.insertCell(0).textContent = d.name;
+      tr.insertCell(1).textContent = d.trips;
+      tr.insertCell(2).textContent = (d.totalWeight/1000).toFixed(1);
+      tr.insertCell(3).textContent = d.workDays;
+      tr.insertCell(4).textContent = d.requiredRoda;
+      let perc = parseFloat(d.percentage);
+      let color = perc>=100?"green": (perc>=70?"orange":"red");
+      tr.insertCell(5).innerHTML = `<span style="font-weight:bold;color:${color};">${d.percentage}%</span>`;
+    }
+  }
+
+  // ========== حفظ تلقائي عند رفع الملف ==========
+  async function autoSaveReport(file, data) {
+    let baseName = file.name.replace(/\.(xlsx|xls|xlsm)$/i, '');
+    let reportName = baseName;
+    let counter = 1;
+    while(savedReports.some(r => r.reportName === reportName)) {
+      reportName = `${baseName} (${counter})`;
+      counter++;
+    }
+    const newReport = {
+      id: Date.now(),
+      reportName: reportName,
+      createdAt: new Date().toISOString(),
+      data: {
+        totalRows: data.totalRows,
+        matchedCount: data.matchedCount,
+        notMatchedCount: data.notMatchedCount,
+        totalWeightAll: data.totalWeightAll,
+        driversStats: data.driversStats,
+        materialsStats: data.materialsStats,
+        monthDays: currentMonthDays,
+        officialVacations: currentOfficialVacations
+      }
+    };
+    savedReports.push(newReport);
+    saveReportsToStorage();
+    await loadAndDisplayReportsList();
+    return newReport;
+  }
+
+  // ========== التخزين المحلي ==========
+  function saveReportsToStorage() { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedReports)); }
+  function loadReportsFromStorage() {
+    let s = localStorage.getItem(STORAGE_KEY);
+    if(s) { try { savedReports = JSON.parse(s); savedReports = savedReports.filter(r => r && r.data && r.data.driversStats); } catch(e) { savedReports = []; } } 
+    else { savedReports = []; }
+  }
+
+  async function loadAndDisplayReportsList() {
+    loadReportsFromStorage();
+    const container = document.getElementById("savedReportsList");
+    if(!container) return;
+    container.innerHTML = "";
+    if(savedReports.length === 0) { container.innerHTML = "<div class='muted center'>لا توجد تقارير محفوظة</div>"; return; }
+    savedReports.forEach(r => {
+      const card = document.createElement("div"); card.className = "report-card";
+      if(selectedReportIds.has(r.id)) card.classList.add("selected");
+      card.onclick = (e) => { 
+        if(e.target.tagName === 'BUTTON') return;
+        if(selectedReportIds.has(r.id)) selectedReportIds.delete(r.id);
+        else selectedReportIds.add(r.id);
+        loadAndDisplayReportsList();
+      };
+      const nameSpan = document.createElement("span"); nameSpan.className = "report-name"; nameSpan.textContent = r.reportName;
+      const dateSpan = document.createElement("span"); dateSpan.className = "report-date"; dateSpan.textContent = new Date(r.createdAt).toLocaleDateString('ar-EG');
+      const actions = document.createElement("div"); actions.className = "report-actions";
+      const editBtn = document.createElement("button"); editBtn.textContent = "✏️"; editBtn.onclick = async (e) => { e.stopPropagation(); let nn = prompt("اسم جديد:", r.reportName); if(nn && nn !== r.reportName) { r.reportName = nn; saveReportsToStorage(); loadAndDisplayReportsList(); showToast("تم التعديل","success"); } };
+      const delBtn = document.createElement("button"); delBtn.textContent = "🗑️"; delBtn.onclick = async (e) => { e.stopPropagation(); if(confirm("حذف التقرير؟")) { savedReports = savedReports.filter(x => x.id !== r.id); selectedReportIds.delete(r.id); saveReportsToStorage(); loadAndDisplayReportsList(); showToast("تم الحذف","success"); } };
+      actions.appendChild(editBtn); actions.appendChild(delBtn);
+      const viewBtn = document.createElement("button"); viewBtn.textContent = "👁️ عرض"; viewBtn.className = "view-report-btn";
+      viewBtn.onclick = (e) => { e.stopPropagation(); displayReport(r); };
+      card.appendChild(nameSpan); card.appendChild(dateSpan); card.appendChild(actions); card.appendChild(viewBtn);
+      container.appendChild(card);
+    });
+  }
+
+  function displayReport(report) {
+    const data = report.data;
+    if(!data || !data.driversStats) { showToast("بيانات التقرير غير صالحة","error"); return; }
+    currentResult = {
+      totalRows: data.totalRows, matchedCount: data.matchedCount, notMatchedCount: data.notMatchedCount,
+      totalWeightAll: data.totalWeightAll, driversStats: data.driversStats, materialsStats: data.materialsStats || []
+    };
+    currentDriversWithDetails = calculateRoda(currentResult.driversStats, data.monthDays || 30, data.officialVacations || 4);
+    currentMonthDays = data.monthDays || 30;
+    currentOfficialVacations = data.officialVacations || 4;
+    document.getElementById("monthDays").value = currentMonthDays;
+    document.getElementById("officialVacations").value = currentOfficialVacations;
+    document.getElementById("metricsGrid").style.display = "grid";
+    document.getElementById("chartsArea").style.display = "block";
+    renderVisuals(currentResult, currentDriversWithDetails);
+    document.getElementById("statusMsg").innerHTML = `✅ معروض: ${report.reportName}`;
+  }
+
+  // ========== دمج التقارير (جمع أيام العمل = أيام العمل الفعلية لكل شهر ثم ضربها في 2) ==========
+  async function mergeSelectedReports() {
+    const selected = savedReports.filter(r => selectedReportIds.has(r.id));
+    if(selected.length < 2) { showToast("اختر تقريرين على الأقل للدمج","error"); return; }
+    showLoading(true);
+    try {
+      let totalRows=0, matchedCount=0, notMatchedCount=0, totalWeightAll=0;
+      const driversMap = new Map();
+      const materialsMap = new Map();
+      let totalWorkDays = 0; // مجموع أيام العمل الفعلية من جميع التقارير
+      let validCount = 0;
+      for(const rep of selected) {
+        const d = rep.data;
+        if(!d || !d.driversStats) continue;
+        validCount++;
+        totalRows += d.totalRows || 0;
+        matchedCount += d.matchedCount || 0;
+        notMatchedCount += d.notMatchedCount || 0;
+        totalWeightAll += d.totalWeightAll || 0;
+        const workDays = (d.monthDays || 30) - (d.officialVacations || 4);
+        totalWorkDays += workDays;
+        for(const dr of d.driversStats) {
+          if(!dr.name) continue;
+          const key = dr.name;
+          if(driversMap.has(key)) {
+            let ex = driversMap.get(key);
+            ex.trips += dr.trips || 0;
+            ex.weight += dr.totalWeight || 0;
+          } else {
+            driversMap.set(key, { name: dr.name, trips: dr.trips || 0, weight: dr.totalWeight || 0 });
+          }
+        }
+        if(d.materialsStats) {
+          for(const mat of d.materialsStats) {
+            if(mat.name) materialsMap.set(mat.name, (materialsMap.get(mat.name)||0) + (mat.weight||0));
+          }
+        }
+      }
+      if(validCount < 2) throw new Error("لا توجد تقارير صالحة");
+      const totalRequiredRoda = totalWorkDays * 2; // الرودات المطلوبة الإجمالية = مجموع أيام العمل × 2
+      const driversList = Array.from(driversMap.values()).map(d => ({ name: d.name, trips: d.trips, totalWeight: d.weight })).sort((a,b)=>b.trips - a.trips);
+      const driversWithDetails = driversList.map(d => ({
+        ...d,
+        workDays: totalWorkDays,   // أيام العمل الفعلية الكلية (مجموع أيام كل شهر)
+        requiredRoda: totalRequiredRoda,
+        percentage: totalRequiredRoda > 0 ? ((d.trips / totalRequiredRoda) * 100).toFixed(2) : 0
+      }));
+      const materialsList = Array.from(materialsMap.entries()).map(([n,w]) => ({ name: n, weight: w })).sort((a,b)=>b.weight - a.weight);
+      currentResult = {
+        totalRows, matchedCount, notMatchedCount, totalWeightAll,
+        driversStats: driversList, materialsStats: materialsList
+      };
+      currentDriversWithDetails = driversWithDetails;
+      currentMonthDays = Math.round(totalWorkDays / validCount) + 4; // تقريب
+      currentOfficialVacations = 4;
+      document.getElementById("monthDays").value = currentMonthDays;
+      document.getElementById("officialVacations").value = currentOfficialVacations;
+      document.getElementById("metricsGrid").style.display = "grid";
+      document.getElementById("chartsArea").style.display = "block";
+      renderVisuals(currentResult, currentDriversWithDetails);
+      document.getElementById("statusMsg").innerHTML = `✅ تم دمج ${validCount} تقارير - إجمالي أيام العمل: ${totalWorkDays} - الرودات المطلوبة: ${totalRequiredRoda}`;
+      showToast(`الدمج ناجح: ${driversList.length} سائق`, "success");
+    } catch(e) { showToast("خطأ: "+e.message, "error"); } finally { showLoading(false); }
+  }
+
+  // ========== تصدير Excel فاخر بالألوان والميداليات ==========
+  async function exportAdvancedExcel() {
+    if(!currentResult) { showToast("لا توجد بيانات","error"); return; }
+    showLoading(true);
+    try {
+      const ExcelJS = window.ExcelJS;
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'نظام كسارة الحبردي';
+      const goldFill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFD700' } };
+      const silverFill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFC0C0C0' } };
+      const bronzeFill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFCD7F32' } };
+      const headerFill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF2E75B6' } };
+      const headerFont = { bold:true, color:{ argb:'FFFFFFFF' }, size:11 };
+      const border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+      const alt1 = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF2F7FB' } };
+      const alt2 = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFFFF' } };
+      function styleSheet(ws, title, headers, rows, specialRowColors=[]) {
+        ws.views = [{ rightToLeft:true }];
+        ws.mergeCells(`A1:${String.fromCharCode(64+headers.length)}1`);
+        ws.getCell('A1').value = title; ws.getCell('A1').font = { size:16, bold:true, color:{ argb:'FF1F4E79' } }; ws.getCell('A1').alignment = { horizontal:'center' }; ws.getRow(1).height = 35;
+        const hr = ws.getRow(2);
+        headers.forEach((h,i)=> hr.getCell(i+1).value = h);
+        hr.eachCell(cell=>{ cell.fill = headerFill; cell.font = headerFont; cell.border = border; cell.alignment = { horizontal:'center' }; });
+        rows.forEach((row,idx)=>{
+          const r = ws.getRow(3+idx);
+          row.forEach((val,ci)=> r.getCell(ci+1).value = val);
+          r.eachCell(cell=>{ cell.border = border; cell.alignment = { horizontal:'center' }; });
+          if(specialRowColors && specialRowColors[idx] === 'gold') r.eachCell(cell=>cell.fill = goldFill);
+          else if(specialRowColors && specialRowColors[idx] === 'silver') r.eachCell(cell=>cell.fill = silverFill);
+          else if(specialRowColors && specialRowColors[idx] === 'bronze') r.eachCell(cell=>cell.fill = bronzeFill);
+          else r.eachCell(cell=>cell.fill = idx%2===0 ? alt1 : alt2);
+        });
+        ws.columns = headers.map(()=> ({ width: 22 }));
+      }
+      // 1. ملخص
+      styleSheet(wb.addWorksheet("ملخص"), "📊 ملخص التقرير", ['المؤشر','القيمة'], [
+        ['إجمالي الصفوف', currentResult.totalRows],
+        ['رحلاتنا', currentResult.matchedCount],
+        ['غير تابعة', currentResult.notMatchedCount],
+        ['نسبة الإنجاز', currentResult.totalRows?((currentResult.matchedCount/currentResult.totalRows)*100).toFixed(2)+'%':'0%'],
+        ['عدد السائقين', currentResult.driversStats.length],
+        ['إجمالي الوزن (طن)', (currentResult.totalWeightAll/1000).toFixed(2)]
+      ]);
+      // 2. جميع السائقين
+      styleSheet(wb.addWorksheet("جميع السائقين"), "🚛 جميع السائقين", ['السائق','الرحلات','الوزن (طن)'],
+        currentResult.driversStats.map(d=>[d.name, d.trips, (d.totalWeight/1000).toFixed(2)]));
+      // 3. المواد
+      styleSheet(wb.addWorksheet("المواد"), "📦 توزيع المواد", ['نوع البحص','الوزن (طن)'],
+        currentResult.materialsStats.map(m=>[m.name, (m.weight/1000).toFixed(2)]));
+      // 4. الرودات
+      styleSheet(wb.addWorksheet("الرودات"), "📋 الرودات والنسب", ['السائق','الرحلات','أيام العمل الفعلية','الرودات المطلوبة','النسبة %'],
+        currentDriversWithDetails.map(d=>[d.name, d.trips, d.workDays, d.requiredRoda, d.percentage+'%']));
+      // 5. أفضل 10
+      let top10 = currentResult.driversStats.slice(0,10).map((d,i)=>[i+1, d.name, d.trips]);
+      styleSheet(wb.addWorksheet("أفضل 10 سائقين"), "🏆 أفضل 10", ['الترتيب','السائق','الرحلات'], top10);
+      // 6. أسوأ 10
+      let worst10 = [...currentResult.driversStats].sort((a,b)=>a.trips-b.trips).slice(0,10).map((d,i)=>[i+1, d.name, d.trips]);
+      styleSheet(wb.addWorksheet("أسوأ 10 سائقين"), "⚠️ أسوأ 10", ['الترتيب','السائق','الرحلات'], worst10);
+      // 7. تكريم (بألوان ذهبي فضي برونزي)
+      let topRoda = [...currentDriversWithDetails].sort((a,b)=>parseFloat(b.percentage)-parseFloat(a.percentage)).slice(0,5);
+      let honorRows = topRoda.map((d,i)=> [i===0?"🥇":(i===1?"🥈":(i===2?"🥉":"🏅")), d.name, d.percentage+'%']);
+      let honorColors = ['gold','silver','bronze','',''];
+      styleSheet(wb.addWorksheet("تكريم السائقين"), "🏅 تكريم السائقين المتميزين", ['الرمز','السائق','النسبة'], honorRows, honorColors);
+      // 8. أقل 5 نسب
+      let bottomRoda = [...currentDriversWithDetails].sort((a,b)=>parseFloat(a.percentage)-parseFloat(b.percentage)).slice(0,5).map((d,i)=>[i+1, d.name, d.percentage+'%']);
+      styleSheet(wb.addWorksheet("أقل 5 نسب رودات"), "⚠️ أقل 5 نسب", ['الترتيب','السائق','النسبة'], bottomRoda);
+      // 9. رسم الوزن
+      styleSheet(wb.addWorksheet("رسم الوزن"), "📊 الأوزان", ['نوع البحص','الوزن (طن)'],
+        currentResult.materialsStats.map(m=>[m.name, (m.weight/1000).toFixed(2)]));
+      // 10. رسم الرحلات
+      styleSheet(wb.addWorksheet("رسم الرحلات"), "📊 الرحلات", ['السائق','الرحلات'],
+        currentResult.driversStats.slice(0,10).map(d=>[d.name, d.trips]));
+      let buf = await wb.xlsx.writeBuffer();
+      let filename = (document.getElementById("outputName").value.trim() || "تقرير_الميزان.xlsx").replace('.xlsx','_متقدم.xlsx');
+      saveAs(new Blob([buf]), filename);
+      showToast("✅ تم التصدير بنجاح", "success");
+    } catch(e) { showToast("خطأ: "+e.message, "error"); } finally { showLoading(false); }
+  }
+
+  // ========== رفع الملف وعرض + حفظ تلقائي ==========
+  document.getElementById("fileInput").onchange = async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    showLoading(true);
+    try {
+      const res = await processExcelFile(file);
+      currentResult = res;
+      currentDriversWithDetails = calculateRoda(res.driversStats, currentMonthDays, currentOfficialVacations);
+      document.getElementById("metricsGrid").style.display = "grid";
+      document.getElementById("chartsArea").style.display = "block";
+      renderVisuals(currentResult, currentDriversWithDetails);
+      // حفظ تلقائي
+      const newReport = await autoSaveReport(file, res);
+      document.getElementById("statusMsg").innerHTML = `✅ تم تحليل الملف وحفظه تلقائياً باسم "${newReport.reportName}"`;
+      showToast(`تم حفظ التقرير تلقائياً باسم ${newReport.reportName}`, "success");
+    } catch(e) { showToast(e.message, "error"); } finally { showLoading(false); }
+  };
+  document.getElementById("applyRodaCalc").onclick = () => {
+    if(currentResult) {
+      currentMonthDays = parseInt(document.getElementById("monthDays").value) || 30;
+      currentOfficialVacations = parseInt(document.getElementById("officialVacations").value) || 0;
+      currentDriversWithDetails = calculateRoda(currentResult.driversStats, currentMonthDays, currentOfficialVacations);
+      renderVisuals(currentResult, currentDriversWithDetails);
+      showToast("تم تحديث الرودات","success");
+    } else showToast("لا توجد بيانات","error");
+  };
+  document.getElementById("mergeReportsBtn").onclick = mergeSelectedReports;
+  document.getElementById("clearSelectionBtn").onclick = () => { selectedReportIds.clear(); loadAndDisplayReportsList(); showToast("تم إلغاء التحديد","success"); };
+  document.getElementById("exportAdvancedBtn").onclick = exportAdvancedExcel;
+
+  loadAndDisplayReportsList();
+</script>

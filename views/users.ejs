@@ -1,0 +1,184 @@
+<style>
+  .users-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  .users-table th, .users-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+  .users-table th { background-color: #f2f2f2; }
+  button { margin: 0 5px; padding: 5px 10px; cursor: pointer; border: none; border-radius: 4px; }
+  .edit-btn { background-color: #2196F3; color: white; }
+  .delete-btn { background-color: #f44336; color: white; }
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+  .modal-content { background: white; padding: 20px; border-radius: 8px; width: 500px; max-width: 90%; }
+  .close { float: left; cursor: pointer; font-size: 20px; }
+  .toast { position: fixed; bottom: 20px; left: 20px; background: #333; color: white; padding: 12px 20px; border-radius: 6px; opacity: 0; transition: opacity 0.3s; z-index: 1100; }
+  .toast.success { background: #4CAF50; }
+  .toast.error { background: #f44336; }
+  form label { display: block; margin-top: 10px; font-weight: bold; }
+  form input, form select { width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+  .btn-submit { background-color: #4CAF50; color: white; padding: 10px; width: 100%; }
+</style>
+
+<h2>📋 إدارة المستخدمين</h2>
+<button id="addUserBtn" style="background:#4CAF50;color:white;">➕ إضافة مستخدم جديد</button>
+<table class="users-table">
+  <thead>
+    <tr><th>ID</th><th>اسم المستخدم</th><th>الاسم الكامل</th><th>الصلاحية</th><th>الحالة</th><th>الإجراءات</th></tr>
+  </thead>
+  <tbody id="usersTableBody"></tbody>
+<table>
+
+<!-- مودال إضافة/تعديل المستخدم -->
+<div id="userModal" class="modal">
+  <div class="modal-content">
+    <span class="close" id="closeModal">&times;</span>
+    <h3 id="modalTitle">إضافة مستخدم جديد</h3>
+    <form id="userForm">
+      <input type="hidden" id="userId" name="userId">
+      <label>اسم المستخدم (Username):</label>
+      <input type="text" id="username" name="username" required>
+      <label>الاسم الكامل:</label>
+      <input type="text" id="fullname" name="name">
+      <label>الصلاحية (الدور):</label>
+      <select id="role" name="role" required>
+        <option value="admin">مدير</option>
+        <option value="employee">موظف</option>
+        <option value="factory">مصنع</option>
+      </select>
+      <label>الحالة:</label>
+      <select id="is_active" name="is_active">
+        <option value="1">نشط</option>
+        <option value="0">محظور</option>
+      </select>
+      <label>كلمة المرور:</label>
+      <input type="password" id="password" name="password" placeholder="••••••">
+      <small>اتركه فارغاً إذا لم ترد تغييره (في حالة التعديل)</small>
+      <button type="submit" class="btn-submit">حفظ</button>
+    </form>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+  let currentMode = 'add'; // 'add' or 'edit'
+
+  async function loadUsers() {
+    try {
+      const res = await fetch('/api/users');
+      if (!res.ok) throw new Error();
+      const users = await res.json();
+      const tbody = document.getElementById('usersTableBody');
+      tbody.innerHTML = '';
+      users.forEach(user => {
+        const row = tbody.insertRow();
+        row.insertCell(0).innerText = user.id;
+        row.insertCell(1).innerText = user.username;
+        row.insertCell(2).innerText = user.name || '';
+        row.insertCell(3).innerText = user.role;
+        row.insertCell(4).innerText = user.is_active == 1 ? 'نشط' : 'محظور';
+        const actions = row.insertCell(5);
+        const editBtn = document.createElement('button');
+        editBtn.innerText = '✏️ تعديل';
+        editBtn.className = 'edit-btn';
+        editBtn.onclick = () => openEditModal(user);
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerText = '🗑️ حذف';
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.onclick = () => deleteUser(user.id);
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+      });
+    } catch(e) {
+      showMessage('خطأ في تحميل المستخدمين', false);
+    }
+  }
+
+  function showMessage(msg, isSuccess = true) {
+    const toast = document.getElementById('toast');
+    toast.innerText = msg;
+    toast.className = `toast ${isSuccess ? 'success' : 'error'}`;
+    toast.style.opacity = '1';
+    setTimeout(() => toast.style.opacity = '0', 3000);
+  }
+
+  async function deleteUser(id) {
+    if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) return;
+    try {
+      const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showMessage('تم حذف المستخدم بنجاح', true);
+        loadUsers();
+      } else {
+        showMessage(data.error || 'فشل الحذف', false);
+      }
+    } catch(e) {
+      showMessage('خطأ في الاتصال', false);
+    }
+  }
+
+  function openEditModal(user) {
+    currentMode = 'edit';
+    document.getElementById('modalTitle').innerText = 'تعديل المستخدم';
+    document.getElementById('userId').value = user.id;
+    document.getElementById('username').value = user.username;
+    document.getElementById('fullname').value = user.name || '';
+    document.getElementById('role').value = user.role;
+    document.getElementById('is_active').value = user.is_active;
+    document.getElementById('password').value = ''; // فارغ، لن يتم تغييره إلا إذا ملأه
+    document.getElementById('userModal').style.display = 'flex';
+  }
+
+  function openAddModal() {
+    currentMode = 'add';
+    document.getElementById('modalTitle').innerText = 'إضافة مستخدم جديد';
+    document.getElementById('userId').value = '';
+    document.getElementById('username').value = '';
+    document.getElementById('fullname').value = '';
+    document.getElementById('role').value = 'employee';
+    document.getElementById('is_active').value = '1';
+    document.getElementById('password').value = '';
+    document.getElementById('userModal').style.display = 'flex';
+  }
+
+  document.getElementById('addUserBtn').onclick = openAddModal;
+  document.getElementById('closeModal').onclick = () => { document.getElementById('userModal').style.display = 'none'; };
+  window.onclick = (e) => { if (e.target === document.getElementById('userModal')) document.getElementById('userModal').style.display = 'none'; };
+
+  document.getElementById('userForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const userId = document.getElementById('userId').value;
+    const username = document.getElementById('username').value;
+    const name = document.getElementById('fullname').value;
+    const role = document.getElementById('role').value;
+    const is_active = parseInt(document.getElementById('is_active').value);
+    const password = document.getElementById('password').value;
+
+    let url = '/api/users';
+    let method = 'POST';
+    let body = { username, name, role, is_active };
+    if (currentMode === 'edit') {
+      url = `/api/users/${userId}`;
+      method = 'PUT';
+      body = { username, name, role, is_active };
+      if (password) body.password = password;
+    } else {
+      if (!password) { showMessage('كلمة المرور مطلوبة للمستخدم الجديد', false); return; }
+      body.password = password;
+    }
+
+    try {
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showMessage(data.message || 'تم الحفظ بنجاح', true);
+        document.getElementById('userModal').style.display = 'none';
+        loadUsers();
+      } else {
+        showMessage(data.error || 'حدث خطأ', false);
+      }
+    } catch(err) {
+      showMessage('فشل الاتصال بالخادم', false);
+    }
+  };
+
+  loadUsers();
+</script>

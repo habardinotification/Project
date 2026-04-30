@@ -1,0 +1,362 @@
+<div class="reports-container">
+  <h1>📂 التقارير المحفوظة</h1>
+  
+  <!-- تبويبات أنواع التقارير -->
+  <div class="report-tabs">
+    <button class="report-tab active" data-type="analytics">📊 تقارير التحليلية</button>
+    <button class="report-tab" data-type="cash">💵 تقارير النقدية</button>
+    <button class="report-tab" data-type="distribution">🚚 تقارير التوزيع</button>
+    <button class="report-tab" data-type="quality">📈 تقارير الجودة</button>
+  </div>
+
+  <!-- قائمة التقارير -->
+  <div id="reportsList" class="reports-grid">
+    <div class="loading-spinner">⏳ جاري التحميل...</div>
+  </div>
+</div>
+
+<style>
+  .reports-container {
+    padding: 1rem;
+  }
+  .report-tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+  }
+  .report-tab {
+    padding: 0.5rem 1.2rem;
+    border-radius: 2rem;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .report-tab:hover {
+    background: var(--primary-soft);
+  }
+  .report-tab.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  .reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+  .report-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .report-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .report-title {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+  .report-date {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+  .report-stats {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+  }
+  .report-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
+    font-weight: bold;
+  }
+  .badge-analytics { background: #3b82f6; color: white; }
+  .badge-cash { background: #10b981; color: white; }
+  .badge-distribution { background: #f59e0b; color: white; }
+  .badge-quality { background: #8b5cf6; color: white; }
+  .loading-spinner {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+  }
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+  }
+  .delete-report {
+    float: left;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    padding: 0.2rem 0.6rem;
+    cursor: pointer;
+    font-size: 0.7rem;
+  }
+  .delete-report:hover {
+    background: #b91c1c;
+  }
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  }
+  .modal-overlay.show {
+    display: flex;
+  }
+  .modal-content {
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    max-width: 90%;
+    width: 800px;
+    max-height: 80%;
+    overflow-y: auto;
+  }
+</style>
+
+<script>
+(function() {
+  let currentType = 'analytics';
+  let allReports = { analytics: [], cash: [], distribution: [], quality: [] };
+
+  // تحميل التقارير من API
+  async function loadReports() {
+    try {
+      const response = await fetch('/api/reports/all', { credentials: 'include' });
+      if (!response.ok) throw new Error('فشل التحميل');
+      const data = await response.json();
+      allReports = {
+        analytics: data.analytics || [],
+        cash: data.cash || [],
+        distribution: data.distribution || [],
+        quality: data.quality || []
+      };
+      renderReports();
+    } catch(e) {
+      console.error('خطأ:', e);
+      // تجربة التحميل من localStorage
+      loadFromLocalStorage();
+    }
+  }
+
+  function loadFromLocalStorage() {
+    try {
+      allReports = {
+        analytics: JSON.parse(localStorage.getItem('reports_analytics') || '[]'),
+        cash: JSON.parse(localStorage.getItem('reports_cash') || '[]'),
+        distribution: JSON.parse(localStorage.getItem('reports_distribution') || '[]'),
+        quality: JSON.parse(localStorage.getItem('reports_quality') || '[]')
+      };
+      renderReports();
+    } catch(e) {
+      document.getElementById('reportsList').innerHTML = '<div class="empty-state">لا توجد تقارير محفوظة</div>';
+    }
+  }
+
+  function renderReports() {
+    const container = document.getElementById('reportsList');
+    const reports = allReports[currentType] || [];
+    
+    if (reports.length === 0) {
+      container.innerHTML = `<div class="empty-state">📭 لا توجد تقارير ${getTypeName(currentType)} محفوظة</div>`;
+      return;
+    }
+    
+    container.innerHTML = reports.map((report, index) => `
+      <div class="report-card" onclick="viewReport('${currentType}', ${index})">
+        <div class="report-title">📊 ${report.title || getTypeName(currentType)}</div>
+        <div class="report-date">📅 ${report.date || 'غير محدد'} | 🕐 ${new Date(report.savedAt).toLocaleString('ar-SA')}</div>
+        <div class="report-stats">
+          <span>📊 ${report.summary?.totalVehicles || report.comparison?.length || 0} عنصر</span>
+          ${report.summary?.totalWastedDiesel ? `<span>💸 ${report.summary.totalWastedDiesel.toFixed(1)} لتر هدر</span>` : ''}
+          ${report.summary?.totalAmount ? `<span>💰 ${report.summary.totalAmount.toFixed(2)} ريال</span>` : ''}
+        </div>
+        <span class="report-badge badge-${currentType}">${getTypeBadge(currentType)}</span>
+        <button class="delete-report" onclick="event.stopPropagation(); deleteReport('${currentType}', ${index})">🗑️</button>
+      </div>
+    `).join('');
+  }
+
+  function getTypeName(type) {
+    const names = { analytics: 'التحليلية', cash: 'النقدية', distribution: 'التوزيع', quality: 'الجودة' };
+    return names[type] || type;
+  }
+
+  function getTypeBadge(type) {
+    const badges = { analytics: 'تحليلي', cash: 'نقدي', distribution: 'توزيع', quality: 'جودة' };
+    return badges[type] || type;
+  }
+
+  async function viewReport(type, index) {
+    const report = allReports[type][index];
+    if (!report) return;
+    
+    // عرض التقرير في نافذة منبثقة
+    const modal = document.getElementById('reportModal');
+    const content = document.getElementById('reportModalContent');
+    
+    let html = `<h2>📊 ${report.title || getTypeName(type)}</h2>`;
+    html += `<p><strong>📅 التاريخ:</strong> ${report.date}</p>`;
+    html += `<p><strong>🕐 تاريخ الحفظ:</strong> ${new Date(report.savedAt).toLocaleString('ar-SA')}</p>`;
+    
+    if (report.summary) {
+      html += `<div style="margin: 1rem 0; padding: 1rem; background: var(--primary-soft); border-radius: 12px;">`;
+      html += `<h3>📈 الملخص الإحصائي</h3>`;
+      if (report.summary.totalVehicles) html += `<p>🚛 عدد السيارات: ${report.summary.totalVehicles}</p>`;
+      if (report.summary.totalDashboardKm) html += `<p>📊 إجمالي المسافة المقدرة: ${report.summary.totalDashboardKm.toFixed(1)} كم</p>`;
+      if (report.summary.totalGpsKm) html += `<p>🛰️ إجمالي المسافة الفعلية: ${report.summary.totalGpsKm.toFixed(1)} كم</p>`;
+      if (report.summary.totalWastedDiesel) html += `<p>💸 إجمالي الهدر: ${report.summary.totalWastedDiesel.toFixed(1)} لتر</p>`;
+      if (report.summary.totalAmount) html += `<p>💰 إجمالي المبالغ: ${report.summary.totalAmount.toFixed(2)} ريال</p>`;
+      html += `</div>`;
+    }
+    
+    if (report.comparison && report.comparison.length > 0) {
+      html += `<div style="overflow-x: auto;"><table style="width:100%; border-collapse:collapse;"><thead><tr>`;
+      html += `<th>#</th><th>رقم السيارة</th><th>مسافة مقدرة</th><th>مسافة فعلية</th><th>هدر</th>`;
+      html += `</tr></thead><tbody>`;
+      report.comparison.slice(0, 20).forEach((item, i) => {
+        html += `<tr><td>${i+1}</td><td>${item.truck}</td><td>${item.dashboardKm || 0}</td><td>${item.gpsKm || 0}</td><td>${item.wastedDiesel || 0}</td></tr>`;
+      });
+      if (report.comparison.length > 20) html += `<tr><td colspan="5">... و ${report.comparison.length - 20} عناصر أخرى</td></tr>`;
+      html += `</tbody></table></div>`;
+    }
+    
+    content.innerHTML = html;
+    modal.classList.add('show');
+  }
+
+  async function deleteReport(type, index) {
+    if (!confirm('هل أنت متأكد من حذف هذا التقرير؟')) return;
+    
+    try {
+      const response = await fetch(`/api/reports/${type}/${index}`, { method: 'DELETE', credentials: 'include' });
+      if (response.ok) {
+        allReports[type].splice(index, 1);
+        saveToLocalStorage();
+        renderReports();
+        showToast('✅ تم حذف التقرير', 'success');
+      } else {
+        throw new Error('فشل الحذف');
+      }
+    } catch(e) {
+      // حذف محلي
+      allReports[type].splice(index, 1);
+      saveToLocalStorage();
+      renderReports();
+      showToast('✅ تم حذف التقرير محلياً', 'success');
+    }
+  }
+
+  function saveToLocalStorage() {
+    localStorage.setItem('reports_analytics', JSON.stringify(allReports.analytics));
+    localStorage.setItem('reports_cash', JSON.stringify(allReports.cash));
+    localStorage.setItem('reports_distribution', JSON.stringify(allReports.distribution));
+    localStorage.setItem('reports_quality', JSON.stringify(allReports.quality));
+  }
+
+  function showToast(msg, type) {
+    const toast = document.createElement('div');
+    toast.textContent = msg;
+    toast.style.cssText = `position:fixed;bottom:20px;right:20px;padding:8px 16px;border-radius:8px;background:${type === 'success' ? '#10b981' : '#ef4444'};color:white;z-index:10001;`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  // حفظ تقرير تحليلي من صفحة GPS
+  window.saveAnalyticsReport = function(date, day, analysis, summary) {
+    const newReport = {
+      id: Date.now(),
+      title: `تقرير تحليلي - ${date}`,
+      date: date,
+      day: day,
+      comparison: analysis,
+      summary: summary,
+      savedAt: new Date().toISOString()
+    };
+    allReports.analytics.unshift(newReport);
+    saveToLocalStorage();
+    
+    // محاولة حفظ على السيرفر
+    fetch('/api/reports/save-analytics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(newReport)
+    }).catch(e => console.log('Save to server failed'));
+    
+    renderReports();
+    showToast('✅ تم حفظ التقرير التحليلي', 'success');
+  };
+
+  // حفظ تقرير نقدي
+  window.saveCashReport = function(date, data, summary) {
+    const newReport = {
+      id: Date.now(),
+      title: `تقرير نقدي - ${date}`,
+      date: date,
+      type: 'cash',
+      data: data,
+      summary: summary,
+      savedAt: new Date().toISOString()
+    };
+    allReports.cash.unshift(newReport);
+    saveToLocalStorage();
+    renderReports();
+    showToast('✅ تم حفظ التقرير النقدي', 'success');
+  };
+
+  // ربط التبويبات
+  document.querySelectorAll('.report-tab').forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentType = tab.dataset.type;
+      renderReports();
+    };
+  });
+
+  // إغلاق المودال
+  window.closeModal = function() {
+    document.getElementById('reportModal').classList.remove('show');
+  };
+
+  // تحميل التقارير عند بدء الصفحة
+  loadReports();
+})();
+</script>
+
+<!-- مودال عرض التقرير -->
+<div class="modal-overlay" id="reportModal" onclick="if(event.target===this) closeModal()">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+      <h3>📄 تفاصيل التقرير</h3>
+      <button onclick="closeModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+    </div>
+    <div id="reportModalContent"></div>
+  </div>
+</div>

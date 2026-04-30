@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light" data-primary="teal">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | <%= systemName %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    (function() {
+      try {
+        const root = document.documentElement;
+        root.setAttribute('data-theme', localStorage.getItem('zarah-theme') || 'light');
+        root.setAttribute('data-primary', localStorage.getItem('zarah-primary') || 'teal');
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    body { display: grid; place-items: center; min-height: 100vh; padding: 1rem; }
+    .contact-card { width: min(520px, 100%); text-align: center; }
+    .contact-card .brand-logo { margin: 0 auto 1rem; }
+    .contact-actions { margin-top: 1.5rem; display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <section class="card contact-card">
+    <div class="brand-logo">🌱</div>
+    <h1><%= companyName %></h1>
+    <p class="muted"><%= systemName %></p>
+    <div class="contact-actions">
+      <a class="btn primary" href="/login">تسجيل الدخول</a>
+      <a class="btn soft" href="/">الرئيسية</a>
+    </div>
+    <div class="footer app-footer">
+      <span>تم برمجتها من قبل م/ علي مهران | 2026</span>
+    </div>
+  </section>
+</body>
+</html>

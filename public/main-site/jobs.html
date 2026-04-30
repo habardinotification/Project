@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كسارة الحبردي - التوظيف</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* تنسيقات خاصة بصفحة التوظيف مع التصميم الداكن */
+        .job-section {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            border-radius: 32px;
+            padding: 2rem;
+            margin: 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 650px;
+            width: 100%;
+        }
+        .job-section h2 {
+            font-size: 1.8rem;
+            color: #f093fb;
+            border-right: 5px solid #f093fb;
+            padding-right: 1rem;
+            margin-bottom: 1.5rem;
+            font-weight: 800;
+        }
+        .job-intro p {
+            color: #eef2ff;
+            margin-bottom: 1.5rem;
+        }
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: #f093fb;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 40px;
+            font-family: inherit;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #f093fb;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        input::placeholder, textarea::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+        textarea {
+            border-radius: 24px;
+            resize: vertical;
+        }
+        .file-input {
+            border: 1px dashed #f093fb;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 40px;
+            padding: 0.6rem 1rem;
+            color: #cdd9ff;
+        }
+        .file-input::-webkit-file-upload-button {
+            background: #11998e;
+            border: none;
+            border-radius: 30px;
+            color: white;
+            padding: 0.3rem 1rem;
+            cursor: pointer;
+        }
+        small {
+            display: block;
+            margin-top: 0.3rem;
+            color: #cdd9ff;
+            font-size: 0.7rem;
+        }
+        button {
+            background: linear-gradient(135deg, #11998e, #0e7a6e);
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            border-radius: 40px;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #0e7a6e;
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
+        }
+        .benefits {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 24px;
+            padding: 1rem;
+            margin-top: 2rem;
+            text-align: center;
+            color: #e0e7ff;
+            font-size: 0.9rem;
+        }
+        .benefits i {
+            color: #f093fb;
+            margin: 0 0.2rem;
+        }
+        select option {
+            background: #1a1a2e;
+            color: white;
+        }
+        /* جعل القسم في المنتصف */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <div class="header-container">
+            <div class="logo-area">
+                <div class="graphic-logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="65" height="65">
+                        <rect width="120" height="120" fill="#1a3f1a" rx="28"/>
+                        <path d="M25,75 L48,40 L70,60 L90,35 L105,55 L98,82 L25,82 Z" fill="#c9a03d" stroke="#e9c468" stroke-width="2"/>
+                        <rect x="42" y="68" width="58" height="22" rx="6" fill="#b87c2a"/>
+                        <rect x="46" y="60" width="36" height="12" rx="4" fill="#dfb45e"/>
+                        <circle cx="55" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/>
+                        <circle cx="85" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/>
+                        <circle cx="55" cy="90" r="3.5" fill="#aaa"/>
+                        <circle cx="85" cy="90" r="3.5" fill="#aaa"/>
+                        <text x="60" y="114" font-size="12" fill="#FFE3A4" text-anchor="middle" font-weight="800">زرعة الخير</text>
+                        <text x="60" y="27" font-size="9" fill="#FFD966" text-anchor="middle">النقليات</text>
+                    </svg>
+                </div>
+                <div class="company-title">
+                    <h1>شركة زرعة الخير للنقليات</h1>
+                    <p>🚛 كسارة الحبردي بطريق الصمان | منطقة الصمان - طريق الرياض الدمام</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="main-layout">
+        <div id="side-nav-container"></div>
+        <main class="main-content">
+            <div class="page-header" style="width:100%; text-align:right;">
+                <h1>فرص العمل</h1>
+                <p>انضم إلى فريق كسارة الحبردي – نبحث عن الكفاءات الطموحة</p>
+            </div>
+            <div style="display:flex; justify-content:center; width:100%;">
+                <div class="job-section">
+                    <h2><i class="fas fa-briefcase"></i> تقديم طلب توظيف</h2>
+                    <div class="job-intro">
+                        <p>نرحب بانضمامك إلينا. يرجى تعبئة البيانات بدقة وسيتم التواصل معك خلال أسبوع عمل.</p>
+                    </div>
+                    <form id="jobApplicationForm">
+                        <div class="form-group">
+                            <label>الاسم الثلاثي *</label>
+                            <input type="text" id="jobName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>رقم الجوال *</label>
+                            <input type="tel" id="jobPhone" required>
+                        </div>
+                        <div class="form-group">
+                            <label>البريد الإلكتروني *</label>
+                            <input type="email" id="jobEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label>الوظيفة المتقدم لها</label>
+                            <select id="jobPosition">
+                                <option>سائق معدات ثقيلة</option>
+                                <option>مشغل كسارة</option>
+                                <option>فني صيانة كهرباء</option>
+                                <option>محاسب / مشتريات</option>
+                                <option>منسق مبيعات خارجي</option>
+                                <option>أمين مستودع</option>
+                                <option>إداري</option>
+                                <option>سكرتير تنفيذي</option>
+                                <option>عامل إنتاج</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>المؤهل العلمي</label>
+                            <input type="text" id="jobQualification">
+                        </div>
+                        <div class="form-group">
+                            <label>سنوات الخبرة</label>
+                            <input type="number" id="jobExperience" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>السيرة الذاتية (PDF أو Word)</label>
+                            <input type="file" id="jobCv" accept=".pdf,.doc,.docx" class="file-input">
+                            <small>الملفات المسموحة: PDF, DOC, DOCX</small>
+                        </div>
+                        <div class="form-group">
+                            <label>رسالة تعريفية (اختياري)</label>
+                            <textarea id="jobMessage" rows="4"></textarea>
+                        </div>
+                        <button type="submit"><i class="fas fa-paper-plane"></i> إرسال الطلب</button>
+                    </form>
+                    <div class="benefits">
+                        <i class="fas fa-check-circle"></i> بيئة عمل احترالية |
+                        <i class="fas fa-chart-line"></i> رواتب مجزية |
+                        <i class="fas fa-clock"></i> تأمين طبي |
+                        <i class="fas fa-car"></i> مواصلات
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <footer>
+        <p>© 2025 شركة زرعة الخير للنقليات - كسارة الحبردي بطريق الصمان | جميع الحقوق محفوظة</p>
+    </footer>
+</div>
+<script>
+    document.getElementById('jobApplicationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = document.getElementById('jobName').value.trim();
+        if(!name) {
+            alert('يرجى إدخال الاسم الثلاثي');
+            return;
+        }
+        alert(`شكراً لك ${name} على التقديم. تم استلام طلبك بنجاح، وسيتم التواصل معك قريباً.`);
+        this.reset();
+        document.getElementById('jobCv').value = '';
+    });
+</script>
+<script src="load-nav.js"></script>
+</body>
+</html>

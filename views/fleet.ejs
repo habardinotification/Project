@@ -1,0 +1,192 @@
+<style>
+  .tabs { display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border-color); }
+  .tab-btn { background: none; border: none; padding: 0.5rem 1rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+  .tab-btn.active { color: var(--primary); border-bottom: 2px solid var(--primary); margin-bottom: -2px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .form-group { margin-bottom: 1rem; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid var(--border-color); padding: 0.5rem; text-align: center; }
+  .fuel-input { width: 100px; padding: 0.3rem; border-radius: 8px; border: 1px solid var(--border-color); }
+</style>
+<div class="section-head"><h2>🚛 إدارة الأسطول – السيارات والسائقين</h2></div>
+<div class="tabs">
+  <button class="tab-btn active" data-tab="trucks">🚛 السيارات (كفاءة الديزل)</button>
+  <button class="tab-btn" data-tab="assignments">🔗 تعيين السائقين</button>
+</div>
+<div id="tab-trucks" class="tab-content active">
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3>كفاءة استهلاك الديزل (كم/لتر)</h3>
+      <button class="btn primary btn-sm" id="saveFuelBtn">💾 حفظ الكفاءة</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>رقم السيارة</th><th>كفاءة الديزل (كم/لتر)</th></tr></thead>
+        <tbody id="trucksFuelBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div id="tab-assignments" class="tab-content">
+  <div class="card">
+    <h3>تعيين السائقين للسيارات</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>رقم السيارة</th><th>السائق الحالي</th><th>تبديل السيارة</th><th>تبديل السائق</th><th>حفظ</th></tr></thead>
+        <tbody id="assignmentsBody"></tbody>
+      </table>
+    </div>
+    <button class="btn soft" id="saveAssignmentsBtn">💾 حفظ التعيينات محلياً</button>
+  </div>
+</div>
+<script>
+  let assignments = [];
+  let fuelEfficiency = {};
+  
+  const DEFAULT_ASSIGNMENTS = [
+    [1091,"مد منظور"],[2757,"انيس"],[2758,"عارف"],[2759,"عتيق الاسلام"],[2760,"سليمان"],
+    [2762,"زرداد"],[2818,"شهداب"],[2927,"مدثر"],[2928,"سمر اقبال"],[2929,"عرفان شبير"],
+    [3321,"ذو القرنين"],[3322,"نعيم"],[3324,"مجمد كليم"],[3325,"اجسان"],[3326,"نويد"],
+    [3461,"جيفان كومار"],[3462,"افتخار"],[3963,"شكيل"],[4445,"عرفان"],[5324,"بابر"],
+    [5367,"محمد ساجد"],[5520,"نابين"],[5521,"فضل"],[5522,"عبيدالله"],[5523,"مجمد فيصل"],
+    [5524,"بير مجمد"],[5525,"صدير الاسلام"],[5526,"مجمد عبدو"],[5527,"سکير"],[5528,"تشاندان"],
+    [5658,"مسعود خان"],[5796,"ساهيل طارق"],[5797,"عبد القادر"],[5800,"غوا مجمد"],[6398,"بينتو"],
+    [6428,"برديب"],[6429,"طاهر"],[6430,"ساكب ميه"],[6432,"نواز"],[6612,"بهادور"],
+    [6613,"نظيم خان"],[6614,"فينود"],[6615,"رسول"],[6616,"يعقوب"],[6617,"اظهر"],
+    [6618,"عثمان"],[6619,"مينا خان"],[6620,"مجمد ساجل"],[6621,"سكندر"],[6622,"مانوج"],
+    [6623,"خالد رجمان"],[6624,"هداية"],[6626,"HARENDRA"],[6629,"جاويد"],[6935,"تيمور"],
+    [6939,"ارشد"],[7042,"فيراس"],[7043,"ايوب خان"],[7332,"علي رضا"],[7682,"خالد"],
+    [7750,"نديم"],[7837,"ارسلان"],[7926,"سجاد"],[7927,"اكبر"],[7928,"امير"],
+    [7929,"طاهر محمود"],[7930,"نارندر"],[7974,"شريف"],[7980,"شعيب"],[9103,"ساكب"],
+    [9492,"عدنان"],[9493,"عامر"],[9495,"ميزان"],[9496,"غفور احمد"]
+  ];
+
+  // 🔥 معدلات الاستهلاك حسب رقم اللوحة (محدثة حسب طلبك)
+  const TRUCK_FUEL_RATES = {
+    3322: 3.2, 5797: 3.2, 5800: 3.2, 6398: 2.9, 6935: 3.2,
+    6616: 3.2, 6432: 2.9, 7929: 3.2, 6615: 3.2, 5367: 2.9,
+    3462: 3.2, 5796: 3.2, 2762: 3.2, 2760: 3.2, 2757: 3.2,
+    6613: 3.2, 3321: 3.2, 7930: 3.2, 3963: 3.2, 2758: 3.2,
+    6624: 3.2, 6428: 2.9, 6612: 3.2, 1091: 2.9, 6621: 3.2,
+    6618: 3.2, 6623: 3.2, 3461: 3.2, 3324: 3.2, 7837: 3.2,
+    2818: 3.2, 5324: 3.2, 2759: 3.2, 6619: 3.2, 6430: 2.9,
+    6626: 3.2, 2928: 3.2, 6614: 3.2, 5520: 3.2, 6622: 3.2,
+    5522: 3.2, 7927: 3.2, 6617: 3.2, 6620: 3.2, 2927: 3.2,
+    7332: 3.2, 7974: 3.2, 3325: 3.2, 9103: 3.2, 3326: 3.2,
+    6429: 2.9, 5526: 3.2, 7928: 3.2, 7980: 3.2, 9493: 3.2,
+    5658: 3.2, 6629: 3.2, 7926: 3.2, 9496: 3.2, 7750: 3.2,
+    2929: 3.2, 9492: 3.2, 4445: 3.2, 5523: 3.2, 7042: 3.2,
+    7043: 3.2, 5524: 3.2, 5525: 3.2, 6939: 3.2, 9495: 3.2,
+    5528: 3.2, 7682: 3.2, 5521: 3.2, 5527: 3.2
+  };
+
+  function loadAssignments() {
+    const stored = localStorage.getItem('fleet_assignments');
+    assignments = stored ? JSON.parse(stored) : [...DEFAULT_ASSIGNMENTS];
+  }
+
+  function saveAssignments() {
+    localStorage.setItem('fleet_assignments', JSON.stringify(assignments));
+    renderAssignments();
+    showToast('تم حفظ التعيينات', 'success');
+  }
+
+  function loadFuelEfficiency() {
+    const stored = localStorage.getItem('truck_fuel_efficiency');
+    fuelEfficiency = stored ? JSON.parse(stored) : {};
+    
+    // تطبيق المعدلات الجديدة حسب رقم اللوحة
+    if (Object.keys(fuelEfficiency).length === 0) {
+      DEFAULT_ASSIGNMENTS.forEach(([truck]) => {
+        fuelEfficiency[truck] = TRUCK_FUEL_RATES[truck] || 3.2;
+      });
+    }
+  }
+
+  function saveFuelEfficiency() {
+    const inputs = document.querySelectorAll('.fuel-input');
+    inputs.forEach(inp => {
+      const truck = inp.dataset.truck;
+      const val = parseFloat(inp.value);
+      if(!isNaN(val) && val>0) fuelEfficiency[truck] = val;
+    });
+    localStorage.setItem('truck_fuel_efficiency', JSON.stringify(fuelEfficiency));
+    showToast('تم حفظ كفاءة الديزل', 'success');
+  }
+
+  function renderTrucksFuel() {
+    const trucksList = [...new Set(assignments.map(a => a[0]))].sort((a,b)=>a-b);
+    const tbody = document.getElementById('trucksFuelBody');
+    tbody.innerHTML = trucksList.map((truck, idx) => `
+      <tr>
+        <td>${idx+1}</td><td>${truck}</td>
+        <td><input type="number" step="0.1" class="fuel-input" data-truck="${truck}" value="${fuelEfficiency[truck] || 3.2}" style="width:100px;"></td>
+      </tr>
+    `).join('');
+  }
+
+  function renderAssignments() {
+    const tbody = document.getElementById('assignmentsBody');
+    const trucksList = [...new Set(assignments.map(a=>a[0]))].sort((a,b)=>a-b);
+    const driversList = [...new Set(assignments.map(a=>a[1]))];
+    tbody.innerHTML = assignments.map((a, idx) => `
+      <tr>
+        <td>${idx+1}</td>
+        <td>${a[0]}</td>
+        <td>${escapeHtml(a[1])}</td>
+        <td><select class="truck-select" data-idx="${idx}">${trucksList.map(t => `<option value="${t}" ${t==a[0]?'selected':''}>${t}</option>`).join('')}</select></td>
+        <td><select class="driver-select" data-idx="${idx}">${driversList.map(d => `<option value="${escapeHtml(d)}" ${d==a[1]?'selected':''}>${escapeHtml(d)}</option>`).join('')}</select></td>
+        <td><button class="btn primary btn-sm save-change" data-idx="${idx}">حفظ</button></td>
+      </tr>
+    `).join('');
+    document.querySelectorAll('.save-change').forEach(btn => {
+      btn.onclick = () => {
+        const idx = btn.dataset.idx;
+        const newTruck = document.querySelector(`.truck-select[data-idx="${idx}"]`).value;
+        const newDriver = document.querySelector(`.driver-select[data-idx="${idx}"]`).value;
+        if(newTruck && newDriver) {
+          assignments[idx] = [parseInt(newTruck), newDriver];
+          renderAssignments();
+          renderTrucksFuel();
+          showToast('تم تحديث التعيين', 'success');
+        }
+      };
+    });
+  }
+
+  function initTabs() {
+    const btns = document.querySelectorAll('.tab-btn');
+    const contents = document.querySelectorAll('.tab-content');
+    btns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.dataset.tab;
+        btns.forEach(b => b.classList.remove('active'));
+        contents.forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+        if(tabId === 'assignments') renderAssignments();
+        if(tabId === 'trucks') renderTrucksFuel();
+      });
+    });
+  }
+
+  function escapeHtml(str) { return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+
+  function showToast(msg,type) {
+    let c = document.getElementById('toastContainer');
+    if(!c){ c=document.createElement('div'); c.id='toastContainer'; c.style.cssText='position:fixed;bottom:20px;left:20px;z-index:3000'; document.body.appendChild(c); }
+    const t=document.createElement('div'); t.className=`toast ${type}`; t.innerText=msg; c.appendChild(t); setTimeout(()=>t.remove(),3000);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadAssignments();
+    loadFuelEfficiency();
+    initTabs();
+    renderTrucksFuel();
+    renderAssignments();
+    document.getElementById('saveFuelBtn').onclick = saveFuelEfficiency;
+    document.getElementById('saveAssignmentsBtn').onclick = saveAssignments;
+  });
+</script>

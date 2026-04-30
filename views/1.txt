@@ -1,0 +1,47 @@
+Folder PATH listing
+Volume serial number is 70C7-F992
+C:.
+¦   1.txt
+¦   blocks.ejs
+¦   cash_orders.ejs
+¦   contact.ejs
+¦   custom_page.ejs
+¦   dashboard.ejs
+¦   distribution-quality.ejs
+¦   distribution.ejs
+¦   expenses.ejs
+¦   factories.ejs
+¦   factory_orders.ejs
+¦   fleet.ejs
+¦   fleet_dashboard.ejs
+¦   gps-comparison.ejs
+¦   layout.ejs
+¦   layout1.ejs
+¦   login.ejs
+¦   logs.ejs
+¦   materials.ejs
+¦   New Text Document.txt
+¦   not_found.ejs
+¦   orders.ejs
+¦   package.json
+¦   pages.ejs
+¦   reports.ejs
+¦   saved-reports.ejs
+¦   scale_report.ejs
+¦   settings.ejs
+¦   trucks-failed-report.ejs
+¦   trucks-failed.ejs
+¦   users.ejs
+¦   
++---auto_pages
+    ¦   example-followup.ejs
+    ¦   login.html
+    ¦   
+    +---src
+        ¦   main.jsx
+        ¦   styles.css
+        ¦   
+        +---assets
+                founder.png
+                logo.png
+                

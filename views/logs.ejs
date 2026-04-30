@@ -1,0 +1,206 @@
+<!-- views/logs.ejs -->
+<% if (typeof user !== 'undefined' && user.role === 'admin') { %>
+<style>
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .data-table th, .data-table td { 
+    padding: 0.7rem; 
+    text-align: center; 
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+  }
+  .data-table th { 
+    background: var(--primary-bg); 
+    font-weight: 800;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .table-responsive { 
+    overflow-x: auto; 
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .filter-bar { 
+    display: flex; 
+    gap: 0.5rem; 
+    margin-bottom: 1rem; 
+    flex-wrap: wrap; 
+    align-items: center; 
+  }
+  .login-row { background: rgba(16, 185, 129, 0.08); }
+  .logout-row { background: rgba(239, 68, 68, 0.08); }
+  .action-row { background: rgba(59, 130, 246, 0.04); }
+  .badge-login { background: #d1fae5; color: #065f46; padding: 0.2rem 0.8rem; border-radius: 20px; font-size: 0.8rem; }
+  .badge-logout { background: #fee2e2; color: #991b1b; padding: 0.2rem 0.8rem; border-radius: 20px; font-size: 0.8rem; }
+  .badge-action { background: #e0e7ff; color: #3730a3; padding: 0.2rem 0.8rem; border-radius: 20px; font-size: 0.8rem; }
+  .ip-cell { 
+    font-family: monospace; 
+    direction: ltr; 
+    background: var(--primary-soft);
+    padding: 0.1rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    display: inline-block;
+  }
+  .active-session { color: #10b981; font-weight: bold; }
+</style>
+
+<div class="page-header">
+  <h1>📜 سجلات النظام والأنشطة</h1>
+  <p class="text-muted">سجل كامل لجميع المستخدمين – الدخول، الإجراءات، والخروج</p>
+</div>
+
+<div class="filter-bar">
+  <button id="showAllBtn" class="btn btn-primary" style="padding: 0.3rem 1rem; border-radius: 2rem;">📋 جميع السجلات</button>
+  <button id="showSessionsBtn" class="btn btn-info">🔐 جلسات الدخول/الخروج</button>
+  <button id="showActionsBtn" class="btn btn-warning">⚡ الإجراءات فقط</button>
+  <span style="margin-right: auto; color: var(--text-muted); font-size: 0.85rem;" id="logCount"></span>
+  <button id="saveReportBtn" class="btn soft" style="margin-right: 0.5rem;">💾 حفظ التقرير</button>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>المستخدم</th>
+          <th>الدور</th>
+          <th>وقت الدخول</th>
+          <th>الإجراء</th>
+          <th>نوع النشاط</th>
+          <th>IP</th>
+          <th>الموقع</th>
+          <th>وقت الخروج</th>
+          <th>مدة الجلسة</th>
+        </tr>
+      </thead>
+      <tbody id="logsBody">
+        <tr><td colspan="10" class="text-center">جاري التحميل...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  let currentFilter = 'all';
+  let allSessions = [];
+
+  async function loadLogs() {
+    try {
+      const res = await fetch('/api/logs/full-sessions', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to load');
+      const data = await res.json();
+      allSessions = data.sessions || [];
+
+      if (!allSessions.length) {
+        document.getElementById('logsBody').innerHTML = '<tr><td colspan="10" class="text-center">📭 لا توجد سجلات بعد</td></tr>';
+        document.getElementById('logCount').textContent = '0 سجل';
+        return;
+      }
+
+      renderFiltered();
+    } catch(e) {
+      console.error(e);
+      document.getElementById('logsBody').innerHTML = '<tr><td colspan="10" class="text-center" style="color: var(--danger);">❌ تعذر تحميل السجلات</td></tr>';
+    }
+  }
+
+  function renderFiltered() {
+    let filtered = allSessions;
+
+    if (currentFilter === 'sessions') {
+      filtered = allSessions.filter(s => s.action_type === 'login' || s.action_type === 'logout');
+    } else if (currentFilter === 'actions') {
+      filtered = allSessions.filter(s => s.action_type === 'action');
+    }
+
+    document.getElementById('logCount').textContent = `${filtered.length} سجل`;
+    const tbody = document.getElementById('logsBody');
+
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="10" class="text-center">📭 لا توجد سجلات مطابقة</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map((log, i) => {
+      let rowClass = 'action-row';
+      let badgeClass = 'badge-action';
+      let typeLabel = 'إجراء';
+
+      if (log.action_type === 'login') {
+        rowClass = 'login-row';
+        badgeClass = 'badge-login';
+        typeLabel = 'دخول';
+      } else if (log.action_type === 'logout') {
+        rowClass = 'logout-row';
+        badgeClass = 'badge-logout';
+        typeLabel = 'خروج';
+      }
+
+      const ip = log.ip_address ? `<span class="ip-cell">${log.ip_address}</span>` : '-';
+      const loginTime = log.login_time ? new Date(log.login_time).toLocaleString('ar-SA') : '-';
+      const logoutTime = log.logout_time ? new Date(log.logout_time).toLocaleString('ar-SA') : 
+                         (log.session_active ? '<span class="active-session">🟢 نشط</span>' : '-');
+
+      let duration = '-';
+      if (log.login_time && log.logout_time) {
+        const diff = Math.floor((new Date(log.logout_time) - new Date(log.login_time)) / 60000);
+        duration = diff < 60 ? `${diff} د` : `${Math.floor(diff/60)} س ${diff%60} د`;
+      } else if (log.login_time && log.session_active) {
+        const diff = Math.floor((Date.now() - new Date(log.login_time)) / 60000);
+        duration = diff < 60 ? `🟢 ${diff} د` : `🟢 ${Math.floor(diff/60)} س ${diff%60} د`;
+      }
+
+      return `<tr class="${rowClass}">
+        <td>${i+1}</td>
+        <td><strong>${log.username || 'غير معروف'}</strong></td>
+        <td>${log.role || 'مستخدم'}</td>
+        <td>${loginTime}</td>
+        <td>${log.action || '-'}</td>
+        <td><span class="${badgeClass}">${typeLabel}</span></td>
+        <td>${ip}</td>
+        <td>${log.location || '-'}</td>
+        <td>${logoutTime}</td>
+        <td>${duration}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('showAllBtn').onclick = () => { currentFilter = 'all'; renderFiltered(); };
+  document.getElementById('showSessionsBtn').onclick = () => { currentFilter = 'sessions'; renderFiltered(); };
+  document.getElementById('showActionsBtn').onclick = () => { currentFilter = 'actions'; renderFiltered(); };
+
+  document.getElementById('saveReportBtn').onclick = async () => {
+    const rows = [...document.querySelectorAll('#logsBody tr')].slice(0, 50);
+    const data = rows.map(r => ({
+      user: r.cells[1]?.innerText,
+      role: r.cells[2]?.innerText,
+      login: r.cells[3]?.innerText,
+      action: r.cells[4]?.innerText,
+      type: r.cells[5]?.innerText,
+      ip: r.cells[6]?.innerText,
+      logout: r.cells[8]?.innerText,
+      duration: r.cells[9]?.innerText
+    }));
+    try {
+      await fetch('/api/saved-reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ title: 'System Logs', type: 'logs', data })
+      });
+      alert('✅ Report saved');
+    } catch(e) { alert('❌ Failed'); }
+  };
+
+  loadLogs();
+</script>
+
+<% } else { %>
+  <div style="text-align:center; padding: 3rem;">
+    <h2>⛔ Unauthorized</h2>
+    <p>This page is for administrators only.</p>
+    <a href="/dashboard" class="btn primary">Back to Dashboard</a>
+  </div>
+<% } %>

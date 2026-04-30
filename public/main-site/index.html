@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كسارة الحبردي - الرئيسية | زرعة الخير</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* أنماط إضافية خاصة بالصفحة الرئيسية فقط، متوافقة مع التصميم الداكن الجديد */
+        .hero {
+            background: linear-gradient(135deg, #1e2a3a, #0f1724);
+            /* تمت إزالة الصورة التي تسبب علامات استفهام */
+            padding: 80px 20px;
+            text-align: center;
+            color: #ffffff;
+            border-radius: 32px;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        /* إضافة أيقونة خلفية زخرفية بدلاً من الصورة المعطلة */
+        .hero::before {
+            content: "\f0d1";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            bottom: -30px;
+            left: -30px;
+            font-size: 200px;
+            opacity: 0.05;
+            color: #c9a03d;
+            pointer-events: none;
+        }
+        .hero::after {
+            content: "\f2b5";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            font-size: 220px;
+            opacity: 0.04;
+            color: #f093fb;
+            pointer-events: none;
+        }
+        .hero h2 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 750px;
+            margin: 0 auto 35px;
+            color: #eef2ff;
+            position: relative;
+            z-index: 1;
+        }
+        /* أزرار متناسقة مع التصميم الجديد */
+        .btn-primary {
+            display: inline-block;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 700;
+            text-decoration: none;
+            margin: 0 8px;
+            background: linear-gradient(135deg, #11998e, #0e7a6e);
+            color: white;
+            border: none;
+            transition: 0.2s;
+            position: relative;
+            z-index: 1;
+        }
+        .btn-primary:hover {
+            transform: scale(1.02);
+            background: #0e7a6e;
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
+        }
+        .btn-outline-light {
+            display: inline-block;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 700;
+            text-decoration: none;
+            margin: 0 8px;
+            border: 2px solid #f093fb;
+            color: #f093fb;
+            background: transparent;
+            transition: 0.2s;
+            position: relative;
+            z-index: 1;
+        }
+        .btn-outline-light:hover {
+            background: #f093fb;
+            color: #1a1a2e;
+            border-color: #f093fb;
+        }
+        /* قسم الإحصائيات */
+        .stats {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 55px 20px;
+            text-align: center;
+            border-radius: 32px;
+            margin-top: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .stats-container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        .stats div h3 {
+            font-size: 2.8rem;
+            color: #f093fb;
+            margin-bottom: 8px;
+        }
+        .stats div p {
+            color: #cdd9ff;
+            font-weight: 500;
+        }
+        /* تنسيق البطاقات الموجودة بالفعل في main-content (مثل cards-grid) تم تعريفها في style.css، 
+           لكن نضيف تحسينات للصفحة الرئيسية */
+        .cards-grid .card i {
+            color: #f093fb;
+        }
+        @media (max-width: 880px) {
+            .hero h2 { font-size: 2rem; }
+            .stats div h3 { font-size: 2rem; }
+            .hero { padding: 50px 15px; }
+            .hero::before, .hero::after { font-size: 120px; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <div class="header-container">
+            <div class="logo-area">
+                <div class="graphic-logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="65" height="65">
+                        <rect width="120" height="120" fill="#1a3f1a" rx="28"/>
+                        <path d="M25,75 L48,40 L70,60 L90,35 L105,55 L98,82 L25,82 Z" fill="#c9a03d" stroke="#e9c468" stroke-width="2"/>
+                        <rect x="42" y="68" width="58" height="22" rx="6" fill="#b87c2a"/>
+                        <rect x="46" y="60" width="36" height="12" rx="4" fill="#dfb45e"/>
+                        <circle cx="55" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/>
+                        <circle cx="85" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/>
+                        <circle cx="55" cy="90" r="3.5" fill="#aaa"/>
+                        <circle cx="85" cy="90" r="3.5" fill="#aaa"/>
+                        <text x="60" y="114" font-size="12" fill="#FFE3A4" text-anchor="middle" font-weight="800">زرعة الخير</text>
+                        <text x="60" y="27" font-size="9" fill="#FFD966" text-anchor="middle">النقليات</text>
+                    </svg>
+                </div>
+                <div class="company-title">
+                    <h1>شركة زرعة الخير للنقليات</h1>
+                    <p>🚛 كسارة الحبردي بطريق الصمان | منطقة الصمان - طريق الرياض الدمام</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="main-layout">
+        <div id="side-nav-container"></div>
+        <main class="main-content">
+            <div class="hero">
+                <h2>قوة في الإنتاج، دقة في الجودة</h2>
+                <p>نقدم أفضل أنواع البحص والبودرة والرمل بأعلى معايير الجودة، ونوفر أسطول نقل حديث لتوصيل احتياجاتك أينما كنت.</p>
+                <a href="products.html" class="btn-primary">استكشف منتجاتنا</a>
+                <a href="contact.html" class="btn-outline-light">اطلب عينة</a>
+            </div>
+            <div class="cards-grid">
+                <div class="card">
+                    <i class="fas fa-truck" style="font-size:2.5rem; margin-bottom:1rem; display:inline-block;"></i>
+                    <h3>أسطول نقل حديث</h3>
+                    <p>خدمة توصيل سريعة وآمنة لجميع أنحاء المملكة.</p>
+                </div>
+                <div class="card">
+                    <i class="fas fa-gem" style="font-size:2.5rem; margin-bottom:1rem;"></i>
+                    <h3>منتجات عالية الجودة</h3>
+                    <p>جميع منتجاتنا تخضع لأرقى معايير الجودة العالمية.</p>
+                </div>
+                <div class="card">
+                    <i class="fas fa-headset" style="font-size:2.5rem; margin-bottom:1rem;"></i>
+                    <h3>دعم فني على مدار الساعة</h3>
+                    <p>فريق متاح للإجابة على استفساراتكم.</p>
+                </div>
+            </div>
+            <div class="stats">
+                <div class="stats-container">
+                    <div><h3>+15</h3><p>سنة خبرة</p></div>
+                    <div><h3>+500</h3><p>مشروع ناجح</p></div>
+                    <div><h3>+120</h3><p>شاحنة في الأسطول</p></div>
+                    <div><h3>+10K</h3><p>عميل راضي</p></div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <footer>
+        <p>© 2025 شركة زرعة الخير للنقليات - كسارة الحبردي بطريق الصمان | جميع الحقوق محفوظة</p>
+    </footer>
+</div>
+<script src="load-nav.js"></script>
+</body>
+</html>

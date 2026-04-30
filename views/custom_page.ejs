@@ -1,0 +1,8 @@
+<section class="card custom-content">
+  <div class="section-head"><h2><%= page.icon %> <%= page.title %></h2><span class="pill">صفحة مضافة</span></div>
+  <% if (page.content_html) { %>
+    <div class="content-box"><%- page.content_html %></div>
+  <% } else { %>
+    <div class="empty-state">هذه صفحة مضافة حديثاً. يمكن تعديل محتواها من إدارة الصفحات.</div>
+  <% } %>
+</section>

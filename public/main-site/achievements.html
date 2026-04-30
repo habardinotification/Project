@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كسارة الحبردي - إنجازاتنا</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* تنسيقات خاصة بصفحة الإنجازات للتوافق مع التصميم الداكن */
+        .cards-grid .card i {
+            color: #f093fb;  /* وردي مميز بدلاً من الذهبي القديم */
+        }
+        .cards-grid .card h3 {
+            color: #f093fb;
+        }
+        .cards-grid .card p {
+            color: #e0e7ff;
+        }
+        /* البطاقة الإضافية (الجودة) */
+        .extra-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(4px);
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: 0.2s;
+        }
+        .extra-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: #667eea;
+        }
+        .extra-card h3 {
+            color: #f093fb;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+        .extra-card p {
+            color: #eef2ff;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <div class="header-container">
+            <div class="logo-area">
+                <div class="graphic-logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="65" height="65">
+                        <rect width="120" height="120" fill="#1a3f1a" rx="28"/>
+                        <path d="M25,75 L48,40 L70,60 L90,35 L105,55 L98,82 L25,82 Z" fill="#c9a03d" stroke="#e9c468" stroke-width="2"/>
+                        <rect x="42" y="68" width="58" height="22" rx="6" fill="#b87c2a"/>
+                        <rect x="46" y="60" width="36" height="12" rx="4" fill="#dfb45e"/>
+                        <circle cx="55" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/>
+                        <circle cx="85" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/>
+                        <circle cx="55" cy="90" r="3.5" fill="#aaa"/>
+                        <circle cx="85" cy="90" r="3.5" fill="#aaa"/>
+                        <text x="60" y="114" font-size="12" fill="#FFE3A4" text-anchor="middle" font-weight="800">زرعة الخير</text>
+                        <text x="60" y="27" font-size="9" fill="#FFD966" text-anchor="middle">النقليات</text>
+                    </svg>
+                </div>
+                <div class="company-title">
+                    <h1>شركة زرعة الخير للنقليات</h1>
+                    <p>🚛 كسارة الحبردي بطريق الصمان | منطقة الصمان - طريق الرياض الدمام</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="main-layout">
+        <div id="side-nav-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1>إنجازاتنا</h1>
+                <p>شريك نجاح لأكبر المشاريع في المملكة</p>
+            </div>
+            <div class="cards-grid">
+                <div class="card">
+                    <i class="fas fa-road" style="font-size:2.5rem; margin-bottom:1rem; display:inline-block;"></i>
+                    <h3>تزويد طريق الرياض - الدمام</h3>
+                    <p>تم توريد أكثر من 500,000 طن من البحص لمشروع توسعة الطريق السريع.</p>
+                </div>
+                <div class="card">
+                    <i class="fas fa-city" style="font-size:2.5rem; margin-bottom:1rem;"></i>
+                    <h3>مدينة الملك عبدالله الاقتصادية</h3>
+                    <p>المشاركة في توريد مواد البنية التحتية للمدينة بأعلى مواصفات الجودة.</p>
+                </div>
+                <div class="card">
+                    <i class="fas fa-hard-hat" style="font-size:2.5rem; margin-bottom:1rem;"></i>
+                    <h3>شهادة الجودة ISO</h3>
+                    <p>حصلنا على شهادة الأيزو 9001:2025 في إدارة الجودة والإنتاج.</p>
+                </div>
+            </div>
+            <div class="extra-card">
+                <h3>جودة منتجاتنا</h3>
+                <p>نحن نؤمن بأن الجودة هي أساس أي بناء قوي، لذلك نطبق أحدث أنظمة التحكم في الجودة بدءًا من اختيار المواد الخام وصولاً إلى مراحل التكسير والغربلة والتغليف.</p>
+            </div>
+        </main>
+    </div>
+    <footer>
+        <p>© 2025 شركة زرعة الخير للنقليات - كسارة الحبردي بطريق الصمان | جميع الحقوق محفوظة</p>
+    </footer>
+</div>
+<script src="load-nav.js"></script>
+</body>
+</html>

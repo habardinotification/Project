@@ -1,0 +1,765 @@
+<!-- views/cash_orders.ejs -->
+<!-- طلبات الكاش - تصميم عصري مع قوائم عملاء ذكية وتقارير محفوظة -->
+<style>
+  /* تنسيق الصفحة */
+  .cash-orders-container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  /* تنسيق بطاقات الإحصائيات */
+  .stats-grid-cash {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .stat-card-cash {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s;
+  }
+  
+  .stat-card-cash:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  
+  .stat-number-cash {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1.2;
+  }
+  
+  .stat-label-cash {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+  }
+  
+  /* نموذج الإضافة المصغر */
+  .add-order-card {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+  }
+  
+  .form-grid-cash {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.8rem;
+    align-items: end;
+  }
+  
+  .form-group-cash {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  
+  .form-group-cash label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .form-group-cash input, 
+  .form-group-cash select {
+    padding: 0.5rem 0.7rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.85rem;
+  }
+  
+  .form-group-cash input:focus, 
+  .form-group-cash select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-soft);
+  }
+  
+  .btn-cash {
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    font-size: 0.85rem;
+    border: none;
+  }
+  
+  .btn-primary-cash {
+    background: var(--primary);
+    color: white;
+  }
+  
+  .btn-primary-cash:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+  }
+  
+  .btn-soft-cash {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+  }
+  
+  .btn-soft-cash:hover {
+    background: var(--primary-soft);
+    border-color: var(--primary);
+  }
+  
+  /* قائمة العملاء المنسدلة الذكية */
+  .client-select-wrapper {
+    position: relative;
+  }
+  
+  .client-input-group {
+    display: flex;
+    gap: 0.3rem;
+  }
+  
+  .client-input-group input {
+    flex: 1;
+  }
+  
+  .client-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-top: 4px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  
+  .client-dropdown.show {
+    display: block;
+  }
+  
+  .client-search-box {
+    padding: 0.6rem;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    background: inherit;
+  }
+  
+  .client-search-box input {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    font-size: 0.8rem;
+  }
+  
+  .client-option {
+    padding: 0.6rem 0.8rem;
+    cursor: pointer;
+    transition: 0.1s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+  
+  .client-option:hover {
+    background: var(--primary-soft);
+  }
+  
+  .client-phone-small {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+  
+  .add-new-client {
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-weight: 600;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .add-new-client:hover {
+    background: var(--primary);
+    color: white;
+  }
+  
+  /* جدول الطلبات */
+  .orders-table-wrapper {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin-top: 1rem;
+  }
+  
+  .orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  
+  .orders-table th {
+    padding: 0.8rem 0.5rem;
+    text-align: center;
+    background: var(--primary-bg);
+    color: var(--primary);
+    font-weight: 700;
+    border-bottom: 2px solid var(--border-color);
+  }
+  
+  .orders-table td {
+    padding: 0.6rem 0.5rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .orders-table tr:hover {
+    background: var(--primary-soft);
+  }
+  
+  .locked-badge {
+    background: #f59e0b;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    display: inline-block;
+  }
+  
+  /* فلتر بار */
+  .filter-bar-cash {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: var(--bg-card);
+    border-radius: 16px;
+  }
+  
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  
+  .filter-group label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  
+  .filter-group input {
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    font-size: 0.8rem;
+  }
+  
+  @media (max-width: 768px) {
+    .form-grid-cash {
+      grid-template-columns: 1fr;
+    }
+    .stats-grid-cash {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .orders-table th, .orders-table td {
+      font-size: 0.7rem;
+      padding: 0.4rem 0.3rem;
+    }
+  }
+</style>
+
+<div class="cash-orders-container">
+  <!-- بطاقات الإحصائيات -->
+  <div class="stats-grid-cash" id="statsGrid"></div>
+
+  <!-- نموذج إضافة طلب جديد -->
+  <div class="add-order-card">
+    <h4 style="margin-bottom: 1rem; font-size: 0.95rem;">💰 طلب نقدي جديد</h4>
+    <div class="form-grid-cash">
+      <div class="form-group-cash">
+        <label>👤 العميل</label>
+        <div class="client-select-wrapper">
+          <div class="client-input-group">
+            <input type="text" id="clientNameInput" placeholder="اختر أو اكتب عميل..." autocomplete="off">
+            <button class="btn-cash btn-soft-cash" id="addNewClientBtn" style="padding: 0.5rem 0.8rem;" title="إضافة عميل جديد">➕</button>
+          </div>
+          <div class="client-dropdown" id="clientDropdown">
+            <div class="client-search-box">
+              <input type="text" id="clientSearchBox" placeholder="🔍 بحث عن عميل...">
+            </div>
+            <div id="clientOptionsList"></div>
+            <div class="client-option add-new-client" id="quickAddClientOption">
+              <span>➕ إضافة عميل جديد</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group-cash">
+        <label>📞 الهاتف</label>
+        <input type="tel" id="clientPhone" placeholder="رقم الهاتف">
+      </div>
+      
+      <div class="form-group-cash">
+        <label>⚖️ الوزن (طن)</label>
+        <input type="number" id="weight" step="0.01" placeholder="0.00">
+      </div>
+      
+      <div class="form-group-cash">
+        <label>💰 السعر/طن</label>
+        <input type="number" id="price" step="0.01" placeholder="0.00">
+      </div>
+      
+      <div class="form-group-cash">
+        <label>📦 نوع البحص</label>
+        <select id="materialType">
+          <option value="3/4">3/4</option>
+          <option value="3/8">3/8</option>
+          <option value="3/16">3/16</option>
+          <option value="مغسول">مغسول</option>
+          <option value="بودرة">بودرة</option>
+        </select>
+      </div>
+      
+      <div class="form-group-cash">
+        <label>💰 الإجمالي</label>
+        <input type="text" id="totalAmount" readonly style="background: var(--primary-bg); font-weight: bold;">
+      </div>
+      
+      <div class="form-group-cash">
+        <label>⏰ الوقت</label>
+        <input type="datetime-local" id="orderTime">
+      </div>
+      
+      <div>
+        <button class="btn-cash btn-primary-cash" id="saveOrderBtn" style="width: 100%;">💾 حفظ الطلب</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- فلتر التقارير -->
+  <div class="filter-bar-cash">
+    <div class="filter-group">
+      <label>📅 من</label>
+      <input type="date" id="filterStartDate">
+    </div>
+    <div class="filter-group">
+      <label>📅 إلى</label>
+      <input type="date" id="filterEndDate">
+    </div>
+    <div class="filter-group">
+      <label>👤 العميل</label>
+      <input type="text" id="filterClient" placeholder="اسم العميل">
+    </div>
+    <div class="filter-group">
+      <label>&nbsp;</label>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn-cash btn-soft-cash" id="applyFiltersBtn">🔍 تصفية</button>
+        <button class="btn-cash btn-soft-cash" id="resetFiltersBtn">🗑️ إعادة ضبط</button>
+        <button class="btn-cash btn-primary-cash" id="exportExcelBtn">📥 Excel</button>
+        <button class="btn-cash btn-primary-cash" id="saveReportBtn">💾 حفظ التقرير</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- جدول الطلبات -->
+  <div class="orders-table-wrapper">
+    <table class="orders-table">
+      <thead>
+        <tr><th>#</th><th>التاريخ</th><th>العميل</th><th>الهاتف</th><th>الوزن (طن)</th><th>السعر/طن</th><th>الإجمالي</th><th>نوع البحص</th><th>الحالة</th><th>إجراءات</th></tr>
+      </thead>
+      <tbody id="ordersBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script>
+  // ==================== المتغيرات العامة ====================
+  let cashOrders = [];
+  let clients = []; // قائمة العملاء {name, phone}
+  const ORDERS_KEY = 'cash_orders';
+  const CLIENTS_KEY = 'cash_clients';
+  let currentFilters = { startDate: '', endDate: '', client: '' };
+
+  // ==================== تحميل وحفظ البيانات ====================
+  function loadData() {
+    // تحميل الطلبات
+    const storedOrders = localStorage.getItem(ORDERS_KEY);
+    if (storedOrders) {
+      try { cashOrders = JSON.parse(storedOrders); } catch(e) { cashOrders = []; }
+    }
+    cashOrders.sort((a,b) => new Date(b.dateTime) - new Date(a.dateTime));
+    
+    // تحميل العملاء
+    const storedClients = localStorage.getItem(CLIENTS_KEY);
+    if (storedClients) {
+      try { clients = JSON.parse(storedClients); } catch(e) { clients = []; }
+    }
+    
+    renderStatsAndTable();
+  }
+
+  function saveOrders() {
+    localStorage.setItem(ORDERS_KEY, JSON.stringify(cashOrders));
+    renderStatsAndTable();
+  }
+
+  function saveClients() {
+    localStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
+  }
+
+  // ==================== إدارة العملاء ====================
+  function addClient(name, phone) {
+    if (!name || name.trim() === '') return false;
+    const existing = clients.find(c => c.name === name);
+    if (!existing) {
+      clients.push({ name: name.trim(), phone: phone || '' });
+      saveClients();
+      return true;
+    }
+    return false;
+  }
+
+  function getClientPhone(name) {
+    const client = clients.find(c => c.name === name);
+    return client ? client.phone : '';
+  }
+
+  function renderClientDropdown(searchTerm = '') {
+    const container = document.getElementById('clientOptionsList');
+    if (!container) return;
+    
+    let filteredClients = clients;
+    if (searchTerm) {
+      filteredClients = clients.filter(c => c.name.includes(searchTerm));
+    }
+    
+    if (filteredClients.length === 0) {
+      container.innerHTML = '<div style="padding: 0.6rem; color: var(--text-muted); text-align: center;">لا توجد عملاء</div>';
+      return;
+    }
+    
+    container.innerHTML = filteredClients.map(client => `
+      <div class="client-option" data-name="${client.name}" data-phone="${client.phone}">
+        <span>👤 ${client.name}</span>
+        ${client.phone ? `<span class="client-phone-small">📞 ${client.phone}</span>` : ''}
+      </div>
+    `).join('');
+    
+    // إضافة حدث النقر
+    container.querySelectorAll('.client-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const name = opt.getAttribute('data-name');
+        const phone = opt.getAttribute('data-phone');
+        document.getElementById('clientNameInput').value = name;
+        document.getElementById('clientPhone').value = phone;
+        document.getElementById('clientDropdown').classList.remove('show');
+      });
+    });
+  }
+
+  // ==================== حساب الإجمالي ====================
+  function updateTotal() {
+    const weight = parseFloat(document.getElementById('weight').value) || 0;
+    const price = parseFloat(document.getElementById('price').value) || 0;
+    document.getElementById('totalAmount').value = (weight * price).toFixed(2);
+  }
+
+  // ==================== حفظ طلب جديد ====================
+  function saveOrder() {
+    let clientName = document.getElementById('clientNameInput').value.trim();
+    const clientPhone = document.getElementById('clientPhone').value.trim();
+    const weight = parseFloat(document.getElementById('weight').value);
+    const price = parseFloat(document.getElementById('price').value);
+    const material = document.getElementById('materialType').value;
+    let orderTime = document.getElementById('orderTime').value;
+    
+    if (!orderTime) orderTime = new Date().toISOString().slice(0,16);
+    
+    if (!clientName) { showToast('يرجى إدخال اسم العميل', 'error'); return; }
+    if (isNaN(weight) || weight <= 0) { showToast('الوزن يجب أن يكون أكبر من صفر', 'error'); return; }
+    if (isNaN(price) || price <= 0) { showToast('السعر يجب أن يكون أكبر من صفر', 'error'); return; }
+    
+    // إضافة العميل إذا كان جديداً
+    addClient(clientName, clientPhone);
+    
+    const total = weight * price;
+    cashOrders.unshift({
+      id: Date.now(),
+      clientName, clientPhone, weight, price, material, dateTime: orderTime,
+      total, locked: true, createdAt: new Date().toISOString()
+    });
+    
+    saveOrders();
+    
+    // تفريغ الحقول
+    document.getElementById('weight').value = '';
+    document.getElementById('price').value = '';
+    document.getElementById('totalAmount').value = '';
+    if (!orderTime) document.getElementById('orderTime').value = '';
+    
+    showToast('✅ تم حفظ الطلب النقدي بنجاح', 'success');
+  }
+
+  // ==================== حذف طلب ====================
+  function deleteOrder(id) {
+    if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
+      cashOrders = cashOrders.filter(o => o.id != id);
+      saveOrders();
+      showToast('✅ تم حذف الطلب', 'success');
+    }
+  }
+
+  // ==================== الفلترة ====================
+  function applyFilters() {
+    currentFilters.startDate = document.getElementById('filterStartDate').value;
+    currentFilters.endDate = document.getElementById('filterEndDate').value;
+    currentFilters.client = document.getElementById('filterClient').value.trim();
+    renderStatsAndTable();
+  }
+  
+  function resetFilters() {
+    document.getElementById('filterStartDate').value = '';
+    document.getElementById('filterEndDate').value = '';
+    document.getElementById('filterClient').value = '';
+    currentFilters = { startDate: '', endDate: '', client: '' };
+    renderStatsAndTable();
+  }
+  
+  function filterOrders(orders) {
+    return orders.filter(order => {
+      const orderDate = order.dateTime.split('T')[0];
+      if (currentFilters.startDate && orderDate < currentFilters.startDate) return false;
+      if (currentFilters.endDate && orderDate > currentFilters.endDate) return false;
+      if (currentFilters.client && !order.clientName.includes(currentFilters.client)) return false;
+      return true;
+    });
+  }
+
+  // ==================== عرض الإحصائيات والجدول ====================
+  function renderStatsAndTable() {
+    const filtered = filterOrders(cashOrders);
+    const totalOrders = filtered.length;
+    const totalWeight = filtered.reduce((s,o) => s + o.weight, 0);
+    const totalRevenue = filtered.reduce((s,o) => s + o.total, 0);
+    const avgPrice = totalWeight ? totalRevenue / totalWeight : 0;
+    
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card-cash"><div class="stat-number-cash">${totalOrders}</div><div class="stat-label-cash">📋 عدد الطلبات</div></div>
+      <div class="stat-card-cash"><div class="stat-number-cash">${totalWeight.toFixed(2)}</div><div class="stat-label-cash">⚖️ إجمالي الوزن (طن)</div></div>
+      <div class="stat-card-cash"><div class="stat-number-cash">${totalRevenue.toLocaleString()}</div><div class="stat-label-cash">💰 إجمالي الإيرادات (ر.س)</div></div>
+      <div class="stat-card-cash"><div class="stat-number-cash">${avgPrice.toFixed(2)}</div><div class="stat-label-cash">📈 متوسط السعر (ر.س/طن)</div></div>
+    `;
+    
+    const tbody = document.getElementById('ordersBody');
+    if (!filtered.length) {
+      tbody.innerHTML = '<td><td colspan="10" style="text-align:center; padding:2rem;">لا توجد طلبات</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = filtered.map((order, idx) => `
+      <tr>
+        <td>${idx+1}</td>
+        <td>${order.dateTime.replace('T', ' ')}</td>
+        <td>${escapeHtml(order.clientName)}</td>
+        <td>${escapeHtml(order.clientPhone) || '—'}</td>
+        <td>${order.weight.toFixed(2)}</td>
+        <td>${order.price.toFixed(2)}</td>
+        <td>${order.total.toLocaleString()}</td>
+        <td>${order.material}</td>
+        <td><span class="locked-badge">🔒 مقفل</span></td>
+        <td><button class="btn-cash btn-soft-cash" onclick="deleteOrder(${order.id})" style="padding: 0.3rem 0.6rem;">🗑️ حذف</button></td>
+      </tr>
+    `).join('');
+  }
+
+  // ==================== تصدير Excel ====================
+  async function exportToExcel() {
+    const filtered = filterOrders(cashOrders);
+    if (!filtered.length) { showToast('لا توجد بيانات للتصدير', 'error'); return; }
+    
+    const wsData = filtered.map((order, idx) => ({
+      '#': idx+1,
+      'التاريخ': order.dateTime.replace('T', ' '),
+      'العميل': order.clientName,
+      'الهاتف': order.clientPhone || '—',
+      'الوزن (طن)': order.weight,
+      'السعر/طن (ر.س)': order.price,
+      'الإجمالي (ر.س)': order.total,
+      'نوع البحص': order.material,
+      'الحالة': 'مقفل'
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الطلبات النقدية');
+    XLSX.writeFile(wb, `طلبات_نقدية_${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast('✅ تم التصدير', 'success');
+  }
+
+  // ==================== حفظ التقرير في صفحة التقارير المحفوظة ====================
+  async function saveReport() {
+    const filtered = filterOrders(cashOrders);
+    if (!filtered.length) { showToast('لا توجد بيانات لحفظ التقرير', 'error'); return; }
+    
+    const reportData = {
+      id: Date.now(),
+      type: 'cash_orders',
+      title: `تقرير الطلبات النقدية - ${new Date().toLocaleDateString('ar-SA')}`,
+      date: new Date().toISOString(),
+      filters: { ...currentFilters },
+      data: filtered.map(order => ({
+        clientName: order.clientName,
+        clientPhone: order.clientPhone,
+        weight: order.weight,
+        price: order.price,
+        material: order.material,
+        total: order.total,
+        dateTime: order.dateTime
+      })),
+      summary: {
+        totalOrders: filtered.length,
+        totalWeight: filtered.reduce((s,o) => s + o.weight, 0),
+        totalRevenue: filtered.reduce((s,o) => s + o.total, 0),
+        avgPrice: filtered.reduce((s,o) => s + o.total, 0) / filtered.reduce((s,o) => s + o.weight, 0)
+      }
+    };
+    
+    // جلب التقارير المحفوظة الموجودة
+    let savedReports = [];
+    const stored = localStorage.getItem('saved_analytical_reports');
+    if (stored) {
+      try { savedReports = JSON.parse(stored); } catch(e) {}
+    }
+    
+    savedReports.unshift(reportData);
+    localStorage.setItem('saved_analytical_reports', JSON.stringify(savedReports));
+    
+    showToast('✅ تم حفظ التقرير في صفحة التقارير التحليلية', 'success');
+  }
+
+  // ==================== دوال مساعدة ====================
+  function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'); }
+  
+  function showToast(msg, type) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:3000;display:flex;flex-direction:column;gap:8px;';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
+    toast.style.cssText = `background:${bgColor};color:white;padding:0.5rem 1rem;border-radius:8px;font-size:0.8rem;animation:slideIn 0.3s ease;`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  // ==================== تهيئة القوائم المنسدلة ====================
+  function initClientDropdown() {
+    const clientInput = document.getElementById('clientNameInput');
+    const dropdown = document.getElementById('clientDropdown');
+    const searchBox = document.getElementById('clientSearchBox');
+    
+    clientInput.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.client-dropdown').forEach(d => d.classList.remove('show'));
+      dropdown.classList.add('show');
+      renderClientDropdown('');
+      if (searchBox) {
+        searchBox.value = '';
+        searchBox.focus();
+      }
+    });
+    
+    if (searchBox) {
+      searchBox.addEventListener('input', (e) => {
+        renderClientDropdown(e.target.value);
+      });
+    }
+    
+    document.addEventListener('click', (e) => {
+      if (!clientInput.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('show');
+      }
+    });
+    
+    // إضافة عميل جديد من الخيار السريع
+    const quickAddOption = document.getElementById('quickAddClientOption');
+    quickAddOption.addEventListener('click', () => {
+      const newName = prompt('أدخل اسم العميل الجديد:');
+      if (newName && newName.trim()) {
+        const newPhone = prompt('أدخل رقم الهاتف (اختياري):');
+        addClient(newName, newPhone || '');
+        renderClientDropdown('');
+        showToast(`✅ تم إضافة العميل ${newName}`, 'success');
+      }
+    });
+  }
+  
+  // ==================== إضافة عميل جديد من الزر ====================
+  function addNewClient() {
+    const newName = prompt('أدخل اسم العميل الجديد:');
+    if (newName && newName.trim()) {
+      const newPhone = prompt('أدخل رقم الهاتف (اختياري):');
+      addClient(newName, newPhone || '');
+      document.getElementById('clientNameInput').value = newName;
+      document.getElementById('clientPhone').value = newPhone || '';
+      showToast(`✅ تم إضافة العميل ${newName}`, 'success');
+    }
+  }
+
+  // ==================== تهيئة الصفحة ====================
+  document.addEventListener('DOMContentLoaded', () => {
+    loadData();
+    initClientDropdown();
+    
+    // تعيين الوقت الحالي
+    if (!document.getElementById('orderTime').value) {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      document.getElementById('orderTime').value = now.toISOString().slice(0,16);
+    }
+    
+    updateTotal();
+    
+    // الأحداث
+    document.getElementById('saveOrderBtn').addEventListener('click', saveOrder);
+    document.getElementById('applyFiltersBtn').addEventListener('click', applyFilters);
+    document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+    document.getElementById('saveReportBtn').addEventListener('click', saveReport);
+    document.getElementById('addNewClientBtn').addEventListener('click', addNewClient);
+    document.getElementById('weight').addEventListener('input', updateTotal);
+    document.getElementById('price').addEventListener('input', updateTotal);
+  });
+</script>

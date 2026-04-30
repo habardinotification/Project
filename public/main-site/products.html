@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كسارة الحبردي - منتجاتنا</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* إعادة تعريف product-card لتناسب التصميم الداكن */
+        .product-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(4px);
+            border-radius: 28px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: 0.2s;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .product-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-5px);
+            border-color: #667eea;
+        }
+        .product-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .product-card h3 {
+            margin: 1rem 1rem 0.5rem;
+            color: #f093fb;
+            font-weight: 800;
+            font-size: 1.3rem;
+        }
+        .product-card p {
+            margin: 0 1rem 1rem;
+            color: #e0e7ff;
+            line-height: 1.5;
+        }
+        /* تنسيق شبكة البطاقات - متوافق مع style.css ولكن نضيف هنا */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        /* تنسيق فيديو TikTok (إن وجد) - للاستخدام المستقبلي */
+        .tiktok-video {
+            width: 90%;
+            max-width: 280px;
+            margin: 0.5rem auto;
+            display: block;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .no-video {
+            margin: 0 1rem 1rem;
+            color: #aaa;
+            font-size: 0.8rem;
+            text-align: center;
+            background: rgba(0,0,0,0.3);
+            padding: 0.5rem;
+            border-radius: 16px;
+        }
+        /* تخصيص الصفحة */
+        .page-header p {
+            color: #cdd9ff;
+        }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <div class="header-container">
+            <div class="logo-area">
+                <div class="graphic-logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="65" height="65">
+                        <rect width="120" height="120" fill="#1a3f1a" rx="28"/>
+                        <path d="M25,75 L48,40 L70,60 L90,35 L105,55 L98,82 L25,82 Z" fill="#c9a03d" stroke="#e9c468" stroke-width="2"/>
+                        <rect x="42" y="68" width="58" height="22" rx="6" fill="#b87c2a"/>
+                        <rect x="46" y="60" width="36" height="12" rx="4" fill="#dfb45e"/>
+                        <circle cx="55" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/>
+                        <circle cx="85" cy="90" r="9" fill="#2c2c2c" stroke="#111" stroke-width="2"/>
+                        <circle cx="55" cy="90" r="3.5" fill="#aaa"/>
+                        <circle cx="85" cy="90" r="3.5" fill="#aaa"/>
+                        <text x="60" y="114" font-size="12" fill="#FFE3A4" text-anchor="middle" font-weight="800">زرعة الخير</text>
+                        <text x="60" y="27" font-size="9" fill="#FFD966" text-anchor="middle">النقليات</text>
+                    </svg>
+                </div>
+                <div class="company-title">
+                    <h1>شركة زرعة الخير للنقليات</h1>
+                    <p>🚛 كسارة الحبردي بطريق الصمان | منطقة الصمان - طريق الرياض الدمام</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="main-layout">
+        <div id="side-nav-container"></div>
+        <main class="main-content">
+            <div class="page-header">
+                <h1>منتجاتنا</h1>
+                <p>أفضل أنواع البحص والبودرة والرمل بجودة عالية</p>
+            </div>
+            <div class="cards-grid">
+                <!-- بحص 3/4 -->
+                <div class="product-card">
+                    <img src="https://www.arkanaltatweer.com/wp-content/uploads/2025/01/%D8%A8%D8%AD%D8%B5.jpg" alt="بحص 3/4">
+                    <h3>بحص 3/4 بوصة</h3>
+                    <p>مقاس 22-16 مم، يستخدم في الخرسانة الجاهزة والأساسات.</p>
+                </div>
+                <!-- بحص 3/8 -->
+                <div class="product-card">
+                    <img src="https://www.arkanaltatweer.com/wp-content/uploads/2024/12/3-8.jpg" alt="بحص 3/8">
+                    <h3>بحص 3/8 بوصة</h3>
+                    <p>مقاس 15-7 مم، مثالي للخرسانة الخفيفة والبلاط.</p>
+                </div>
+                <!-- بحص 3/16 -->
+                <div class="product-card">
+                    <img src="https://www.arkanaltatweer.com/wp-content/uploads/2024/12/3-16.jpg" alt="بحص 3/16">
+                    <h3>بحص 3/16 بوصة</h3>
+                    <p>مقاس 7-2 مم، يستخدم في أعمال اللياسة والبياض.</p>
+                </div>
+                <!-- بحص مغسول A1B -->
+                <div class="product-card">
+                    <img src="https://postcdn.haraj.com.sa/userfiles30/2022-08-31/675x900_32246D8B-37E9-4D64-B07E-9CA1651C9C3D.jpg-700.webp" alt="بحص مغسول A1B">
+                    <h3>بحص مغسول A1B</h3>
+                    <p>خالي من الأتربة والشوائب، للخرسانة عالية الجودة.</p>
+                </div>
+                <!-- بحص 4 انش -->
+                <div class="product-card">
+                    <img src="https://mimg6cdn.haraj.com.sa/userfiles30/2026-4-2/1080x1045-1_-mkJczTa5qb2a4n.jpg" alt="بحص 4 انش">
+                    <h3>بحص 4 انش</h3>
+                    <p>مقاس خشن للأساسات الضخمة والردود.</p>
+                </div>
+                <!-- بودرة -->
+                <div class="product-card">
+                    <img src="https://ar.stonetoplink.com/uploads/202025974/gravel-pebble-stone14295014325.jpg" alt="بودرة">
+                    <h3>بودرة كسارة</h3>
+                    <p>ناعمة جدًا للردم والتسوية وصناعة البلاط.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    <footer>
+        <p>© 2025 شركة زرعة الخير للنقليات - كسارة الحبردي بطريق الصمان | جميع الحقوق محفوظة</p>
+    </footer>
+</div>
+<script src="load-nav.js"></script>
+</body>
+</html>

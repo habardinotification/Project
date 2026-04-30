@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الأسطول والتوزيع</title>
+    <!-- Font Cairo & Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Excel export libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --border-color: #cbd5e1;
+            --bg-card: #ffffff;
+            --bg-sidebar: #f1f5f9;
+            --text-muted: #64748b;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #f8fafc;
+            padding: 1rem;
+        }
+        .main-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        .main-tab-btn {
+            background: none;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: 0.2s;
+            border-radius: 16px 16px 0 0;
+        }
+        .main-tab-btn.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+            background: rgba(37, 99, 235, 0.04);
+            margin-bottom: -2px;
+        }
+        .main-content {
+            display: none;
+        }
+        .main-content.active {
+            display: block;
+        }
+
+        /* Fleet sub‑tabs */
+        .fleet-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .fleet-tab-btn {
+            background: none;
+            border: 1px solid transparent;
+            padding: 0.4rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-muted);
+            border-radius: 20px;
+            transition: 0.2s;
+        }
+        .fleet-tab-btn.active {
+            color: var(--primary);
+            border-color: var(--primary);
+            background: rgba(37, 99, 235, 0.05);
+        }
+        .fleet-tab-content {
+            display: none;
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .fleet-tab-content.active {
+            display: block;
+        }
+
+        /* General components */
+        .actions-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 40px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Cairo', sans-serif;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-sm { padding: 0.3rem 0.8rem; font-size: 0.85rem; }
+
+        .table-wrap { overflow-x: auto; margin-top: 1rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { border: 1px solid var(--border-color); padding: 0.5rem; text-align: center; vertical-align: middle; }
+        th { background: var(--bg-sidebar); font-weight: 700; }
+
+        .fuel-input { width: 90px; padding: 0.3rem; border-radius: 8px; border: 1px solid var(--border-color); text-align: center; }
+        select { padding: 0.3rem; border-radius: 8px; border: 1px solid var(--border-color); background: white; }
+        .icon-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; margin: 0 4px; }
+        .add-form { display: flex; gap: 10px; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
+        .add-form input { padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-color); flex: 1; min-width: 150px; }
+
+        .code-badge {
+            display: inline-block;
+            background: #eef2ff;
+            color: #2563eb;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+        .plate-badge {
+            display: inline-block;
+            background: #f0fdf4;
+            color: #059669;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 3000;
+            font-family: 'Cairo', sans-serif;
+        }
+        .toast {
+            background: white;
+            padding: 10px 20px;
+            margin-top: 8px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            font-weight: 600;
+            direction: rtl;
+            border-right: 4px solid #10b981;
+        }
+        .toast.error { border-right-color: #ef4444; }
+        .toast.warning { border-right-color: #f59e0b; }
+    </style>
+</head>
+<body>
+    <div class="main-tabs">
+        <button class="main-tab-btn active" data-main="fleet">🚛 الأسطول</button>
+        <button class="main-tab-btn" data-main="distribution">📦 التوزيع</button>
+    </div>
+
+    <!-- ═══════════ القسم الرئيسي: الأسطول ═══════════ -->
+    <div id="main-fleet" class="main-content active">
+        <div class="fleet-tabs">
+            <button class="fleet-tab-btn active" data-fleet="cars">🚛 السيارات (المركز)</button>
+            <button class="fleet-tab-btn" data-fleet="codes">🔢 الكودات</button>
+            <button class="fleet-tab-btn" data-fleet="plates">🏷️ اللوحات</button>
+            <button class="fleet-tab-btn" data-fleet="assignments">🔗 تعيين السائقين</button>
+            <button class="fleet-tab-btn" data-fleet="drivers">👤 السائقين</button>
+        </div>
+
+        <!-- تبويب السيارات (المركز) -->
+        <div id="fleet-cars" class="fleet-tab-content active">
+            <div class="actions-bar">
+                <button class="btn btn-primary" id="saveFuelBtn">💾 حفظ كفاءة الديزل</button>
+                <button class="btn btn-success" id="exportFleetBtn">📎 تصدير Excel</button>
+            </div>
+            <p style="color:#64748b;font-size:0.85rem;margin-bottom:0.5rem;">
+                ⚙️ هذه الصفحة هي المركز – تتعامل <strong>بالكود الرقمي فقط</strong>.
+            </p>
+            <div class="table-wrap">
+                <table id="carsTable">
+                    <thead>
+                        <tr><th>#</th><th>🔢 الكود</th><th>الماركة</th><th>سنة الإنتاج</th><th>اللوحة</th><th>معدل الاستهلاك (كم/لتر)</th><th>السائق</th><th>إجراءات</th></tr>
+                    </thead>
+                    <tbody id="carsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- تبويب الكودات -->
+        <div id="fleet-codes" class="fleet-tab-content">
+            <div class="actions-bar">
+                <button class="btn btn-primary" id="saveCodesBtn">💾 حفظ الكودات</button>
+            </div>
+            <div class="add-form">
+                <input type="number" id="newCodeInput" placeholder="كود جديد (مثلاً: 1234)">
+                <button class="btn btn-primary" id="addCodeBtn">➕ إضافة كود</button>
+            </div>
+            <div class="table-wrap">
+                <table id="codesTable">
+                    <thead><tr><th>#</th><th>🔢 الكود</th><th>اللوحة المرتبطة</th><th>إجراءات</th></tr></thead>
+                    <tbody id="codesBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- تبويب اللوحات -->
+        <div id="fleet-plates" class="fleet-tab-content">
+            <div class="actions-bar">
+                <button class="btn btn-primary" id="savePlatesBtn">💾 حفظ اللوحات</button>
+            </div>
+            <div class="add-form">
+                <input type="text" id="newPlateInput" placeholder="رقم اللوحة كامل">
+                <input type="number" id="newPlateCodeInput" placeholder="الكود المرتبط">
+                <button class="btn btn-primary" id="addPlateBtn">➕ إضافة لوحة</button>
+            </div>
+            <div class="table-wrap">
+                <table id="platesTable">
+                    <thead><tr><th>#</th><th>🏷️ رقم اللوحة</th><th>🔢 الكود</th><th>إجراءات</th></tr></thead>
+                    <tbody id="platesBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- تبويب تعيين السائقين -->
+        <div id="fleet-assignments" class="fleet-tab-content">
+            <div class="actions-bar">
+                <button class="btn btn-primary" id="saveAssignmentsBtn">💾 حفظ التعيينات</button>
+            </div>
+            <p style="color:#64748b;font-size:0.85rem;margin-bottom:0.5rem;">
+                🔗 التعيين يتم <strong>بالكود الرقمي</strong>.
+            </p>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>#</th><th>🔢 الكود</th><th>🏷️ اللوحة</th><th>السائق الحالي</th><th>تغيير السائق</th><th>حفظ</th></tr></thead>
+                    <tbody id="assignmentsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- تبويب السائقين -->
+        <div id="fleet-drivers" class="fleet-tab-content">
+            <div class="actions-bar">
+                <button class="btn btn-primary" id="saveDriversBtn">💾 حفظ قائمة السائقين</button>
+                <button class="btn btn-success" id="exportDriversBtn">📎 تصدير السائقين Excel</button>
+            </div>
+            <div class="add-form">
+                <input type="text" id="newDriverName" placeholder="اسم السائق الجديد">
+                <button class="btn btn-primary" id="addDriverBtn">➕ إضافة سائق</button>
+            </div>
+            <div class="table-wrap">
+                <table id="driversTable">
+                    <thead><tr><th>#</th><th>اسم السائق</th><th>إجراءات</th></tr></thead>
+                    <tbody id="driversListBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ القسم الرئيسي: التوزيع ═══════════ -->
+    <div id="main-distribution" class="main-content">
+        <div style="background: var(--bg-card); border-radius:24px; padding:1.5rem; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+            <h2 style="margin-bottom:1rem; color:var(--primary);">📦 أمر توزيع جديد</h2>
+            <div class="add-form" style="flex-wrap:wrap;">
+                <input type="number" id="orderIdInput" placeholder="رقم الأمر (تلقائي)" disabled style="flex:0.5;">
+                <label style="display:flex; align-items:center; gap:10px;">
+                    <span>🔢 كود السيارة:</span>
+                    <input type="number" id="distCodeInput" placeholder="أدخل الكود">
+                </label>
+                <label style="display:flex; align-items:center; gap:10px;">
+                    <span>👤 أو اختر السائق:</span>
+                    <select id="distDriverSelect">
+                        <option value="">-- اختر سائق --</option>
+                    </select>
+                </label>
+                <button class="btn btn-primary" id="addOrderBtn">➕ إضافة أمر توزيع</button>
+            </div>
+            <p style="color:#64748b; font-size:0.85rem; margin-top:0.5rem;">
+                سيتم اعتماد الكود أو السائق المختار من قائمة الأسطول فقط. لن يُسمح بإضافة أكواد غير موجودة.
+            </p>
+
+            <hr style="margin:1.5rem 0; border-color:var(--border-color);">
+
+            <div class="actions-bar">
+                <button class="btn btn-success" id="exportOrdersBtn">📎 تصدير الأوامر Excel</button>
+            </div>
+            <div class="table-wrap">
+                <table id="ordersTable">
+                    <thead>
+                        <tr><th>#</th><th>رقم الأمر</th><th>كود السيارة</th><th>اسم السائق</th><th>الحالة</th><th>إجراء</th></tr>
+                    </thead>
+                    <tbody id="ordersBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script>
+        (function() {
+            // ═══════════════════════════════════════════
+            // بيانات الأسطول الأساسية (كما في النسخة السابقة)
+            // ═══════════════════════════════════════════
+            const fullTrucksData = [
+                { brand: "CNHTC", year: 2025, plate: "3322 UXA", defaultFuel: 3.2, code: 3322 },
+                { brand: "CNHTC", year: 2022, plate: "5797 VRA", defaultFuel: 3.2, code: 5797 },
+                { brand: "CNHTC", year: 2022, plate: "5800 VRA", defaultFuel: 3.2, code: 5800 },
+                { brand: "Volvo", year: 2013, plate: "6398 ERA", defaultFuel: 2.9, code: 6398 },
+                { brand: "SANY", year: 2023, plate: "6935 GSA", defaultFuel: 3.2, code: 6935 },
+                { brand: "SANY", year: 2023, plate: "6616 DSA", defaultFuel: 3.2, code: 6616 },
+                { brand: "Volvo", year: 2011, plate: "6432 TRA", defaultFuel: 2.9, code: 6432 },
+                { brand: "SANY", year: 2024, plate: "7929 DXA", defaultFuel: 3.2, code: 7929 },
+                { brand: "SANY", year: 2023, plate: "6615 DSA", defaultFuel: 3.2, code: 6615 },
+                { brand: "Volvo", year: 2012, plate: "5367 KRA", defaultFuel: 2.9, code: 5367 },
+                { brand: "FAW", year: 2024, plate: "3462 KXA", defaultFuel: 3.2, code: 3462 },
+                { brand: "CNHTC", year: 2022, plate: "5796 VRA", defaultFuel: 3.2, code: 5796 },
+                { brand: "FAW", year: 2025, plate: "2762 BTA", defaultFuel: 3.2, code: 2762 },
+                { brand: "FAW", year: 2025, plate: "2760 BTA", defaultFuel: 3.2, code: 2760 },
+                { brand: "FAW", year: 2025, plate: "2757 BTA", defaultFuel: 3.2, code: 2757 },
+                { brand: "SANY", year: 2023, plate: "6613 DSA", defaultFuel: 3.2, code: 6613 },
+                { brand: "CNHTC", year: 2025, plate: "3321 UXA", defaultFuel: 3.2, code: 3321 },
+                { brand: "SANY", year: 2024, plate: "7930 DXA", defaultFuel: 3.2, code: 7930 },
+                { brand: "SANY", year: 2023, plate: "3963 TSA", defaultFuel: 3.2, code: 3963 },
+                { brand: "FAW", year: 2025, plate: "2758 BTA", defaultFuel: 3.2, code: 2758 },
+                { brand: "SANY", year: 2023, plate: "6624 DSA", defaultFuel: 3.2, code: 6624 },
+                { brand: "Volvo", year: 2012, plate: "6428 TRA", defaultFuel: 2.9, code: 6428 },
+                { brand: "SANY", year: 2023, plate: "6612 DSA", defaultFuel: 3.2, code: 6612 },
+                { brand: "Volvo", year: 2015, plate: "1091 SDA", defaultFuel: 2.9, code: 1091 },
+                { brand: "SANY", year: 2023, plate: "6621 DSA", defaultFuel: 3.2, code: 6621 },
+                { brand: "SANY", year: 2023, plate: "6618 DSA", defaultFuel: 3.2, code: 6618 },
+                { brand: "SANY", year: 2023, plate: "6623 DSA", defaultFuel: 3.2, code: 6623 },
+                { brand: "FAW", year: 2024, plate: "3461 KXA", defaultFuel: 3.2, code: 3461 },
+                { brand: "CNHTC", year: 2025, plate: "3324 UXA", defaultFuel: 3.2, code: 3324 },
+                { brand: "SANY", year: 2024, plate: "7837 DXA", defaultFuel: 3.2, code: 7837 },
+                { brand: "FAW", year: 2025, plate: "2818 BTA", defaultFuel: 3.2, code: 2818 },
+                { brand: "SANY", year: 2024, plate: "5324 SXA", defaultFuel: 3.2, code: 5324 },
+                { brand: "FAW", year: 2025, plate: "2759 BTA", defaultFuel: 3.2, code: 2759 },
+                { brand: "SANY", year: 2023, plate: "6619 DSA", defaultFuel: 3.2, code: 6619 },
+                { brand: "Volvo", year: 2011, plate: "6430 TRA", defaultFuel: 2.9, code: 6430 },
+                { brand: "SANY", year: 2023, plate: "6626 DSA", defaultFuel: 3.2, code: 6626 },
+                { brand: "FAW", year: 2025, plate: "2928 BTA", defaultFuel: 3.2, code: 2928 },
+                { brand: "SANY", year: 2023, plate: "6614 DSA", defaultFuel: 3.2, code: 6614 },
+                { brand: "FAW", year: 2024, plate: "5520 XXA", defaultFuel: 3.2, code: 5520 },
+                { brand: "SANY", year: 2023, plate: "6622 DSA", defaultFuel: 3.2, code: 6622 },
+                { brand: "FAW", year: 2024, plate: "5522 XXA", defaultFuel: 3.2, code: 5522 },
+                { brand: "SANY", year: 2024, plate: "7927 DXA", defaultFuel: 3.2, code: 7927 },
+                { brand: "SANY", year: 2023, plate: "6617 DSA", defaultFuel: 3.2, code: 6617 },
+                { brand: "SANY", year: 2023, plate: "6620 DSA", defaultFuel: 3.2, code: 6620 },
+                { brand: "FAW", year: 2025, plate: "2927 BTA", defaultFuel: 3.2, code: 2927 },
+                { brand: "SANY", year: 2024, plate: "7332 DXA", defaultFuel: 3.2, code: 7332 },
+                { brand: "SANY", year: 2024, plate: "7974 DXA", defaultFuel: 3.2, code: 7974 },
+                { brand: "CNHTC", year: 2025, plate: "3325 UXA", defaultFuel: 3.2, code: 3325 },
+                { brand: "SANY", year: 2023, plate: "9103 HSA", defaultFuel: 3.2, code: 9103 },
+                { brand: "CNHTC", year: 2025, plate: "3326 UXA", defaultFuel: 3.2, code: 3326 },
+                { brand: "Volvo", year: 2012, plate: "6429 TRA", defaultFuel: 2.9, code: 6429 },
+                { brand: "FAW", year: 2024, plate: "5526 XXA", defaultFuel: 3.2, code: 5526 },
+                { brand: "SANY", year: 2024, plate: "7928 DXA", defaultFuel: 3.2, code: 7928 },
+                { brand: "SANY", year: 2024, plate: "7980 DXA", defaultFuel: 3.2, code: 7980 },
+                { brand: "SANY", year: 2024, plate: "9493 SXA", defaultFuel: 3.2, code: 9493 },
+                { brand: "SANY", year: 2024, plate: "5658 RXA", defaultFuel: 3.2, code: 5658 },
+                { brand: "SANY", year: 2023, plate: "6629 DSA", defaultFuel: 3.2, code: 6629 },
+                { brand: "SANY", year: 2024, plate: "7926 DXA", defaultFuel: 3.2, code: 7926 },
+                { brand: "SANY", year: 2024, plate: "9496 SXA", defaultFuel: 3.2, code: 9496 },
+                { brand: "SANY", year: 2024, plate: "7750 DXA", defaultFuel: 3.2, code: 7750 },
+                { brand: "FAW", year: 2025, plate: "2929 BTA", defaultFuel: 3.2, code: 2929 },
+                { brand: "SANY", year: 2024, plate: "9492 SXA", defaultFuel: 3.2, code: 9492 },
+                { brand: "SANY", year: 2023, plate: "4445 GSA", defaultFuel: 3.2, code: 4445 },
+                { brand: "FAW", year: 2024, plate: "5523 XXA", defaultFuel: 3.2, code: 5523 },
+                { brand: "FAW", year: 2024, plate: "7042 ZXA", defaultFuel: 3.2, code: 7042 },
+                { brand: "FAW", year: 2024, plate: "7043 ZXA", defaultFuel: 3.2, code: 7043 },
+                { brand: "FAW", year: 2024, plate: "5524 XXA", defaultFuel: 3.2, code: 5524 },
+                { brand: "FAW", year: 2024, plate: "5525 XXA", defaultFuel: 3.2, code: 5525 },
+                { brand: "SANY", year: 2023, plate: "6939 GSA", defaultFuel: 3.2, code: 6939 },
+                { brand: "SANY", year: 2024, plate: "9495 SXA", defaultFuel: 3.2, code: 9495 },
+                { brand: "FAW", year: 2024, plate: "5528 XXA", defaultFuel: 3.2, code: 5528 },
+                { brand: "SANY", year: 2024, plate: "7682 DXA", defaultFuel: 3.2, code: 7682 },
+                { brand: "FAW", year: 2024, plate: "5521 XXA", defaultFuel: 3.2, code: 5521 },
+                { brand: "FAW", year: 2024, plate: "5527 XXA", defaultFuel: 3.2, code: 5527 }
+            ];
+
+            const DEFAULT_DRIVER_MAP = {
+                1091: "مد منظور", 2757: "انيس", 2758: "عارف", 2759: "عتيق الاسلام",
+                2760: "سليمان", 2762: "زرداد", 2818: "شهداب", 2927: "مدثر",
+                2928: "سمر اقبال", 2929: "عرفان شبير", 3321: "ذو القرنين", 3322: "نعيم",
+                3324: "مجمد كليم", 3325: "اجسان", 3326: "نويد", 3461: "جيفان كومار",
+                3462: "افتخار", 3963: "شكيل", 4445: "عرفان", 5324: "بابر",
+                5367: "محمد ساجد", 5520: "نابين", 5521: "فضل", 5522: "عبيدالله",
+                5523: "مجمد فيصل", 5524: "بير مجمد", 5525: "صدير الاسلام", 5526: "مجمد عبدو",
+                5527: "سکير", 5528: "تشاندان", 5658: "مسعود خان", 5796: "ساهيل طارق",
+                5797: "عبد القادر", 5800: "غوا مجمد", 6398: "بينتو", 6428: "برديب",
+                6429: "طاهر", 6430: "ساكب ميه", 6432: "نواز", 6612: "بهادور",
+                6613: "نظيم خان", 6614: "فينود", 6615: "رسول", 6616: "يعقوب",
+                6617: "اظهر", 6618: "عثمان", 6619: "مينا خان", 6620: "مجمد ساجل",
+                6621: "سكندر", 6622: "مانوج", 6623: "خالد رجمان", 6624: "هداية",
+                6626: "HARENDRA", 6629: "جاويد", 6935: "تيمور", 6939: "ارشد",
+                7042: "فيراس", 7043: "ايوب خان", 7332: "علي رضا", 7682: "خالد",
+                7750: "نديم", 7837: "ارسلان", 7926: "سجاد", 7927: "اكبر",
+                7928: "امير", 7929: "طاهر محمود", 7930: "نارندر", 7974: "شريف",
+                7980: "شعيب", 9103: "ساكب", 9492: "عدنان", 9493: "عامر",
+                9495: "ميزان", 9496: "غفور احمد"
+            };
+
+            // ═══════════════════════════════════════════
+            // متغيرات الأسطول
+            // ═══════════════════════════════════════════
+            let fuelByCode = {};
+            let driverByCode = {};
+            let plateByCode = {};
+            let codeList = [];
+            let driversList = [];
+
+            // ═══════════════════════════════════════════
+            // متغيرات التوزيع
+            // ═══════════════════════════════════════════
+            let orders = []; // { id, code, driver, status }
+            let nextOrderId = 1;
+
+            // ═══════════════════════════════════════════
+            // دوال التحميل والحفظ (محلية)
+            // ═══════════════════════════════════════════
+            function loadFleetData() {
+                const savedCodes = localStorage.getItem('fleet_code_list');
+                if (savedCodes && JSON.parse(savedCodes).length) {
+                    codeList = JSON.parse(savedCodes);
+                } else {
+                    codeList = fullTrucksData.map(t => t.code);
+                }
+
+                const savedPlates = localStorage.getItem('fleet_plate_by_code');
+                plateByCode = savedPlates ? JSON.parse(savedPlates) : {};
+                fullTrucksData.forEach(t => { if (!plateByCode[t.code]) plateByCode[t.code] = t.plate; });
+
+                const savedFuel = localStorage.getItem('fleet_fuel_by_code');
+                fuelByCode = savedFuel ? JSON.parse(savedFuel) : {};
+                fullTrucksData.forEach(t => { if (fuelByCode[t.code] === undefined) fuelByCode[t.code] = t.defaultFuel; });
+
+                const savedDrivers = localStorage.getItem('fleet_driver_by_code');
+                if (savedDrivers) {
+                    driverByCode = JSON.parse(savedDrivers);
+                } else {
+                    driverByCode = {};
+                    codeList.forEach(code => { driverByCode[code] = DEFAULT_DRIVER_MAP[code] || "غير معين"; });
+                }
+
+                const savedDriversList = localStorage.getItem('fleet_drivers_list');
+                if (savedDriversList && JSON.parse(savedDriversList).length) {
+                    driversList = JSON.parse(savedDriversList);
+                } else {
+                    driversList = [...new Set(Object.values(driverByCode).filter(d => d !== "غير معين"))].sort();
+                }
+
+                // مزامنة السائقين من التعيينات
+                const existing = new Set(driversList);
+                Object.values(driverByCode).forEach(d => { if (d !== "غير معين" && !existing.has(d)) driversList.push(d); });
+                driversList.sort();
+            }
+
+            function loadOrders() {
+                const saved = localStorage.getItem('distribution_orders');
+                orders = saved ? JSON.parse(saved) : [];
+                if (orders.length > 0) {
+                    nextOrderId = Math.max(...orders.map(o => o.id)) + 1;
+                } else {
+                    nextOrderId = 1;
+                }
+            }
+
+            function saveFleetData() {
+                localStorage.setItem('fleet_code_list', JSON.stringify(codeList));
+                localStorage.setItem('fleet_plate_by_code', JSON.stringify(plateByCode));
+                localStorage.setItem('fleet_fuel_by_code', JSON.stringify(fuelByCode));
+                localStorage.setItem('fleet_driver_by_code', JSON.stringify(driverByCode));
+                localStorage.setItem('fleet_drivers_list', JSON.stringify(driversList));
+            }
+            function saveOrders() {
+                localStorage.setItem('distribution_orders', JSON.stringify(orders));
+            }
+
+            function getTruckByCode(code) { return fullTrucksData.find(t => t.code === code) || null; }
+            function getDriverByCode(code) { return driverByCode[code] || "غير معين"; }
+            function getPlateByCode(code) { return plateByCode[code] || `${code} ---`; }
+            function getFuelByCode(code) { return fuelByCode[code] !== undefined ? fuelByCode[code] : (getTruckByCode(code)?.defaultFuel || 3.2); }
+
+            // ═══════════════════════════════════════════
+            // دوال العرض – الأسطول
+            // ═══════════════════════════════════════════
+            function renderCarsTable() {
+                const tbody = document.getElementById('carsBody');
+                if (!tbody) return;
+                let html = '';
+                codeList.forEach((code, idx) => {
+                    const truck = getTruckByCode(code);
+                    const brand = truck ? truck.brand : '---';
+                    const year = truck ? truck.year : '---';
+                    const plate = getPlateByCode(code);
+                    const fuel = getFuelByCode(code);
+                    const driver = getDriverByCode(code);
+                    html += `<tr data-code="${code}">
+                <td>${idx+1}</td>
+                <td><span class="code-badge">${code}</span></td>
+                <td>${escapeHtml(String(brand))}</td>
+                <td>${year}</td>
+                <td><span class="plate-badge">${escapeHtml(plate)}</span></td>
+                <td><input type="number" step="0.1" class="fuel-input" data-code="${code}" value="${fuel}"></td>
+                <td>
+                  <select class="driver-select-inline" data-code="${code}">
+                    <option value="غير معين" ${driver==='غير معين'?'selected':''}>غير معين</option>
+                    ${driversList.map(d => `<option value="${escapeHtml(d)}" ${d===driver?'selected':''}>${escapeHtml(d)}</option>`).join('')}
+                  </select>
+                </td>
+                <td><button class="icon-btn edit-car-btn" data-code="${code}" title="تعديل"><i class="fas fa-edit"></i></button></td>
+              </tr>`;
+                });
+                tbody.innerHTML = html;
+                bindCarsEvents();
+            }
+            function bindCarsEvents() {
+                document.querySelectorAll('#carsBody .fuel-input').forEach(inp => {
+                    inp.addEventListener('change', () => {
+                        const code = parseInt(inp.dataset.code);
+                        const val = parseFloat(inp.value);
+                        if (!isNaN(val) && val > 0) { fuelByCode[code] = val;
+                            saveFleetData();
+                            showToast(`تم تحديث كفاءة الكود ${code}`, 'success'); }
+                    });
+                });
+                document.querySelectorAll('#carsBody .driver-select-inline').forEach(sel => {
+                    sel.addEventListener('change', () => {
+                        const code = parseInt(sel.dataset.code);
+                        const newDriver = sel.value;
+                        driverByCode[code] = newDriver;
+                        saveFleetData();
+                        if (!driversList.includes(newDriver) && newDriver !== "غير معين") {
+                            driversList.push(newDriver);
+                            driversList.sort();
+                            localStorage.setItem('fleet_drivers_list', JSON.stringify(driversList));
+                        }
+                        renderAllFleet();
+                        renderDistributionDriverSelect();
+                        showToast(`تم تعيين ${newDriver} للكود ${code}`, 'success');
+                    });
+                });
+                document.querySelectorAll('#carsBody .edit-car-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const code = parseInt(btn.dataset.code);
+                        const truck = getTruckByCode(code);
+                        const newBrand = prompt('الماركة:', truck ? truck.brand : '');
+                        const newYear = prompt('سنة الإنتاج:', truck ? truck.year : '');
+                        if (newBrand && newYear) {
+                            if (truck) { truck.brand = newBrand;
+                                truck.year = parseInt(newYear); }
+                            renderCarsTable();
+                            showToast(`تم تعديل بيانات الكود ${code}`, 'success');
+                        }
+                    });
+                });
+            }
+
+            function renderCodesTable() {
+                const tbody = document.getElementById('codesBody');
+                if (!tbody) return;
+                let html = '';
+                codeList.forEach((code, idx) => {
+                    const plate = getPlateByCode(code);
+                    html += `<tr><td>${idx+1}</td><td><span class="code-badge">${code}</span></td><td>${escapeHtml(plate)}</td>
+                <td><button class="icon-btn delete-code-btn" data-code="${code}"><i class="fas fa-trash-alt" style="color:#ef4444;"></i></button></td></tr>`;
+                });
+                tbody.innerHTML = html;
+                tbody.querySelectorAll('.delete-code-btn').forEach(btn => {
+                    btn.addEventListener('click', () => deleteCode(parseInt(btn.dataset.code)));
+                });
+            }
+
+            function renderPlatesTable() {
+                const tbody = document.getElementById('platesBody');
+                if (!tbody) return;
+                let html = '';
+                codeList.forEach((code, idx) => {
+                    const plate = getPlateByCode(code);
+                    html += `<tr data-code="${code}">
+                <td>${idx+1}</td>
+                <td><span class="plate-badge plate-text">${escapeHtml(plate)}</span><input type="text" class="edit-plate-input" value="${escapeHtml(plate)}" style="display:none;width:140px;"></td>
+                <td><span class="code-badge">${code}</span></td>
+                <td>
+                  <button class="icon-btn edit-plate-btn" data-code="${code}"><i class="fas fa-edit"></i></button>
+                  <button class="icon-btn save-plate-btn" data-code="${code}" style="display:none;"><i class="fas fa-save" style="color:#10b981;"></i></button>
+                  <button class="icon-btn delete-plate-btn" data-code="${code}"><i class="fas fa-trash-alt" style="color:#ef4444;"></i></button>
+                </td>
+              </tr>`;
+                });
+                tbody.innerHTML = html;
+                bindPlatesEvents();
+            }
+            function bindPlatesEvents() {
+                document.querySelectorAll('#platesBody .edit-plate-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const code = parseInt(btn.dataset.code);
+                        const row = btn.closest('tr');
+                        row.querySelector('.plate-text').style.display = 'none';
+                        row.querySelector('.edit-plate-input').style.display = 'inline-block';
+                        btn.style.display = 'none';
+                        row.querySelector('.save-plate-btn').style.display = 'inline-block';
+                    });
+                });
+                document.querySelectorAll('#platesBody .save-plate-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const code = parseInt(btn.dataset.code);
+                        const row = btn.closest('tr');
+                        const newPlate = row.querySelector('.edit-plate-input').value.trim();
+                        if (newPlate) updatePlate(code, newPlate);
+                    });
+                });
+                document.querySelectorAll('#platesBody .delete-plate-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const code = parseInt(btn.dataset.code);
+                        if (confirm(`حذف لوحة الكود ${code}؟`)) deletePlate(code);
+                    });
+                });
+            }
+
+            function renderAssignmentsTable() {
+                const tbody = document.getElementById('assignmentsBody');
+                if (!tbody) return;
+                let html = '';
+                codeList.forEach((code, idx) => {
+                    const plate = getPlateByCode(code);
+                    const driver = getDriverByCode(code);
+                    html += `<tr data-code="${code}">
+                <td>${idx+1}</td><td><span class="code-badge">${code}</span></td><td><span class="plate-badge">${escapeHtml(plate)}</span></td>
+                <td>${escapeHtml(driver)}</td>
+                <td><select class="assign-driver-select" data-code="${code}">
+                  <option value="غير معين" ${driver==='غير معين'?'selected':''}>غير معين</option>
+                  ${driversList.map(d => `<option value="${escapeHtml(d)}" ${d===driver?'selected':''}>${escapeHtml(d)}</option>`).join('')}
+                </select></td>
+                <td><button class="btn btn-sm btn-primary save-assign-btn" data-code="${code}">💾 حفظ</button></td>
+              </tr>`;
+                });
+                tbody.innerHTML = html;
+                tbody.querySelectorAll('.save-assign-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const code = parseInt(btn.dataset.code);
+                        const newDriver = document.querySelector(`.assign-driver-select[data-code="${code}"]`)?.value;
+                        if (newDriver !== undefined) {
+                            driverByCode[code] = newDriver;
+                            saveFleetData();
+                            if (!driversList.includes(newDriver) && newDriver !== "غير معين") {
+                                driversList.push(newDriver);
+                                driversList.sort();
+                                localStorage.setItem('fleet_drivers_list', JSON.stringify(driversList));
+                            }
+                            renderAllFleet();
+                            renderDistributionDriverSelect();
+                            showToast(`تم تعيين ${newDriver} للكود ${code}`, 'success');
+                        }
+                    });
+                });
+            }
+
+            function renderDriversTable() {
+                const tbody = document.getElementById('driversListBody');
+                if (!tbody) return;
+                let html = '';
+                driversList.forEach((driver, idx) => {
+                    html += `<tr>
+                <td>${idx+1}</td>
+                <td><span class="driver-name-text">${escapeHtml(driver)}</span><input type="text" class="edit-driver-input" value="${escapeHtml(driver)}" style="display:none;width:150px;"></td>
+                <td>
+                  <button class="icon-btn edit-driver" data-driver="${escapeHtml(driver)}"><i class="fas fa-edit"></i></button>
+                  <button class="icon-btn save-driver" data-driver="${escapeHtml(driver)}" style="display:none;"><i class="fas fa-save" style="color:#10b981;"></i></button>
+                  <button class="icon-btn delete-driver" data-driver="${escapeHtml(driver)}"><i class="fas fa-trash-alt" style="color:#ef4444;"></i></button>
+                </td>
+              </tr>`;
+                });
+                tbody.innerHTML = html;
+                bindDriversEvents();
+            }
+            function bindDriversEvents() {
+                document.querySelectorAll('#driversListBody .edit-driver').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const driver = btn.dataset.driver;
+                        const row = btn.closest('tr');
+                        row.querySelector('.driver-name-text').style.display = 'none';
+                        row.querySelector('.edit-driver-input').style.display = 'inline-block';
+                        btn.style.display = 'none';
+                        row.querySelector('.save-driver').style.display = 'inline-block';
+                    });
+                });
+                document.querySelectorAll('#driversListBody .save-driver').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const oldDriver = btn.dataset.driver;
+                        const row = btn.closest('tr');
+                        const newDriver = row.querySelector('.edit-driver-input').value.trim();
+                        if (newDriver && newDriver !== oldDriver) updateDriver(oldDriver, newDriver);
+                        else if (!newDriver) showToast('الاسم لا يمكن أن يكون فارغاً', 'error');
+                    });
+                });
+                document.querySelectorAll('#driversListBody .delete-driver').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const driver = btn.dataset.driver;
+                        if (confirm(`حذف السائق ${driver}؟`)) deleteDriver(driver);
+                    });
+                });
+            }
+
+            function renderAllFleet() {
+                renderCarsTable();
+                renderCodesTable();
+                renderPlatesTable();
+                renderAssignmentsTable();
+                renderDriversTable();
+            }
+
+            // ═══════════════════════════════════════════
+            // دوال إدارة الأسطول (التعديلات)
+            // ═══════════════════════════════════════════
+            function addCode(code) {
+                if (isNaN(code) || codeList.includes(code)) return showToast('الكود موجود أو غير صحيح', 'error');
+                codeList.push(code);
+                codeList.sort((a,b)=>a-b);
+                if (!fuelByCode[code]) fuelByCode[code] = 3.2;
+                if (!driverByCode[code]) driverByCode[code] = "غير معين";
+                if (!plateByCode[code]) plateByCode[code] = `${code} ---`;
+                saveFleetData();
+                renderAllFleet();
+                renderDistributionDriverSelect();
+                showToast(`تمت إضافة الكود ${code}`, 'success');
+            }
+            function deleteCode(code) {
+                if (!codeList.includes(code)) return;
+                if (!confirm(`حذف الكود ${code} وجميع بياناته؟`)) return;
+                codeList = codeList.filter(c => c !== code);
+                delete fuelByCode[code];
+                delete driverByCode[code];
+                delete plateByCode[code];
+                saveFleetData();
+                renderAllFleet();
+                renderDistributionDriverSelect();
+                showToast(`تم حذف الكود ${code}`, 'success');
+            }
+            function updatePlate(code, newPlate) {
+                plateByCode[code] = newPlate.trim();
+                saveFleetData();
+                renderAllFleet();
+            }
+            function deletePlate(code) {
+                plateByCode[code] = `${code} ---`;
+                saveFleetData();
+                renderAllFleet();
+            }
+            function updateDriver(oldName, newName) {
+                const idx = driversList.indexOf(oldName);
+                if (idx !== -1) {
+                    driversList[idx] = newName;
+                    driversList.sort();
+                    Object.keys(driverByCode).forEach(code => { if (driverByCode[code] === oldName) driverByCode[code] = newName; });
+                    saveFleetData();
+                    renderAllFleet();
+                    renderDistributionDriverSelect();
+                    showToast(`تم تعديل السائق إلى ${newName}`, 'success');
+                }
+            }
+            function deleteDriver(driverName) {
+                if (driverName === "غير معين") return showToast('لا يمكن حذف السائق الافتراضي', 'error');
+                const idx = driversList.indexOf(driverName);
+                if (idx !== -1) {
+                    driversList.splice(idx, 1);
+                    Object.keys(driverByCode).forEach(code => { if (driverByCode[code] === driverName) driverByCode[code] = "غير معين"; });
+                    saveFleetData();
+                    renderAllFleet();
+                    renderDistributionDriverSelect();
+                    showToast(`تم حذف السائق ${driverName}`, 'success');
+                }
+            }
+
+            // ═══════════════════════════════════════════
+            // دوال التوزيع
+            // ═══════════════════════════════════════════
+            function renderOrdersTable() {
+                const tbody = document.getElementById('ordersBody');
+                if (!tbody) return;
+                let html = '';
+                orders.forEach((order, idx) => {
+                    const statusText = order.status === 'pending' ? 'قيد الانتظار' : 'تم التوزيع';
+                    html += `<tr>
+                <td>${idx+1}</td>
+                <td>${order.id}</td>
+                <td><span class="code-badge">${order.code}</span></td>
+                <td>${escapeHtml(order.driver)}</td>
+                <td>${statusText}</td>
+                <td>${order.status === 'pending' ? `<button class="btn btn-sm btn-success approve-order" data-id="${order.id}">✔️ توزيع</button>` : '✅'}</td>
+              </tr>`;
+                });
+                tbody.innerHTML = html;
+                tbody.querySelectorAll('.approve-order').forEach(btn => {
+                    btn.addEventListener('click', () => approveOrder(parseInt(btn.dataset.id)));
+                });
+            }
+
+            function approveOrder(orderId) {
+                const order = orders.find(o => o.id === orderId);
+                if (!order || order.status !== 'pending') return;
+                // التحقق النهائي من وجود الكود (يجب أن يكون موجوداً)
+                if (!codeList.includes(order.code)) {
+                    showToast(`الكود ${order.code} لم يعد موجوداً في الأسطول!`, 'error');
+                    return;
+                }
+                order.status = 'approved';
+                saveOrders();
+                renderOrdersTable();
+                showToast(`تم توزيع الأمر ${orderId} على الكود ${order.code}`, 'success');
+            }
+
+            function addOrderFromInput() {
+                const codeInput = document.getElementById('distCodeInput');
+                const driverSelect = document.getElementById('distDriverSelect');
+                let selectedCode = null;
+                let selectedDriver = "";
+
+                if (codeInput.value.trim() !== '') {
+                    const numericCode = parseInt(codeInput.value);
+                    if (isNaN(numericCode) || !codeList.includes(numericCode)) {
+                        showToast('الكود غير موجود في الأسطول', 'error');
+                        return;
+                    }
+                    selectedCode = numericCode;
+                    selectedDriver = getDriverByCode(selectedCode);
+                } else if (driverSelect.value !== '') {
+                    selectedDriver = driverSelect.value;
+                    // البحث عن أول كود لهذا السائق
+                    for (let [code, driver] of Object.entries(driverByCode)) {
+                        if (driver === selectedDriver) {
+                            selectedCode = parseInt(code);
+                            break;
+                        }
+                    }
+                    if (!selectedCode) {
+                        showToast('لا يوجد كود مرتبط بهذا السائق', 'error');
+                        return;
+                    }
+                } else {
+                    showToast('يجب إدخال كود أو اختيار سائق', 'error');
+                    return;
+                }
+
+                // إنشاء الأمر
+                const newOrder = {
+                    id: nextOrderId++,
+                    code: selectedCode,
+                    driver: selectedDriver,
+                    status: 'pending'
+                };
+                orders.push(newOrder);
+                saveOrders();
+                renderOrdersTable();
+                document.getElementById('distCodeInput').value = '';
+                document.getElementById('distDriverSelect').value = '';
+                document.getElementById('orderIdInput').value = nextOrderId; // توقع الرقم التالي
+                showToast(`تمت إضافة الأمر ${newOrder.id}`, 'success');
+            }
+
+            function renderDistributionDriverSelect() {
+                const select = document.getElementById('distDriverSelect');
+                if (!select) return;
+                select.innerHTML = '<option value="">-- اختر سائق --</option>';
+                driversList.forEach(d => {
+                    select.innerHTML += `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`;
+                });
+            }
+
+            // ═══════════════════════════════════════════
+            // دوال عامة
+            // ═══════════════════════════════════════════
+            function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+            function showToast(msg, type='success') {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.innerText = msg;
+                container.appendChild(toast);
+                setTimeout(() => { toast.style.opacity='0';
+                    toast.style.transition='0.3s';
+                    setTimeout(() => toast.remove(), 300); }, 3000);
+            }
+
+            // ═══════════════════════════════════════════
+            // التبويبات
+            // ═══════════════════════════════════════════
+            function initMainTabs() {
+                document.querySelectorAll('.main-tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const main = btn.dataset.main;
+                        document.querySelectorAll('.main-tab-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelectorAll('.main-content').forEach(c => c.classList.remove('active'));
+                        btn.classList.add('active');
+                        document.getElementById(`main-${main}`).classList.add('active');
+                    });
+                });
+            }
+            function initFleetTabs() {
+                document.querySelectorAll('.fleet-tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const fleetTab = btn.dataset.fleet;
+                        document.querySelectorAll('.fleet-tab-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelectorAll('.fleet-tab-content').forEach(c => c.classList.remove('active'));
+                        btn.classList.add('active');
+                        document.getElementById(`fleet-${fleetTab}`).classList.add('active');
+                    });
+                });
+            }
+
+            // ═══════════════════════════════════════════
+            // التصدير
+            // ═══════════════════════════════════════════
+            async function exportFleetExcel() {
+                try {
+                    const wb = new ExcelJS.Workbook();
+                    const ws = wb.addWorksheet('الأسطول');
+                    ws.columns = [
+                        { header: '#', key: 'index', width: 8 },
+                        { header: 'الكود', key: 'code', width: 12 },
+                        { header: 'الماركة', key: 'brand', width: 15 },
+                        { header: 'سنة الإنتاج', key: 'year', width: 12 },
+                        { header: 'رقم اللوحة', key: 'plate', width: 18 },
+                        { header: 'معدل الاستهلاك', key: 'fuel', width: 20 },
+                        { header: 'السائق', key: 'driver', width: 20 }
+                    ];
+                    const rows = codeList.map((code, i) => {
+                        const truck = getTruckByCode(code);
+                        return {
+                            index: i+1, code, brand: truck?.brand || '---', year: truck?.year || '---',
+                            plate: getPlateByCode(code), fuel: getFuelByCode(code), driver: getDriverByCode(code)
+                        };
+                    });
+                    ws.addRows(rows);
+                    ws.getRow(1).eachCell(cell => { cell.font = { bold: true };
+                        cell.fill = { type: 'pattern', pattern:'solid', fgColor:{ argb:'FFC5E0B4' } }; });
+                    const buffer = await wb.xlsx.writeBuffer();
+                    saveAs(new Blob([buffer]), `الاسطول_${new Date().toISOString().slice(0,10)}.xlsx`);
+                    showToast('تم تصدير الأسطول', 'success');
+                } catch(e) { showToast('خطأ في التصدير', 'error'); }
+            }
+            async function exportOrdersExcel() {
+                try {
+                    const wb = new ExcelJS.Workbook();
+                    const ws = wb.addWorksheet('أوامر التوزيع');
+                    ws.columns = [
+                        { header: '#', key: 'index', width: 8 },
+                        { header: 'رقم الأمر', key: 'id', width: 12 },
+                        { header: 'كود السيارة', key: 'code', width: 12 },
+                        { header: 'السائق', key: 'driver', width: 20 },
+                        { header: 'الحالة', key: 'status', width: 15 }
+                    ];
+                    const rows = orders.map((o, i) => ({
+                        index: i+1, id: o.id, code: o.code, driver: o.driver,
+                        status: o.status === 'pending' ? 'قيد الانتظار' : 'تم التوزيع'
+                    }));
+                    ws.addRows(rows);
+                    ws.getRow(1).eachCell(cell => { cell.font = { bold: true }; });
+                    const buffer = await wb.xlsx.writeBuffer();
+                    saveAs(new Blob([buffer]), `اوامر_التوزيع_${new Date().toISOString().slice(0,10)}.xlsx`);
+                    showToast('تم تصدير أوامر التوزيع', 'success');
+                } catch(e) { showToast('خطأ', 'error'); }
+            }
+
+            // ═══════════════════════════════════════════
+            // بدء التشغيل
+            // ═══════════════════════════════════════════
+            loadFleetData();
+            loadOrders();
+            initMainTabs();
+            initFleetTabs();
+            renderAllFleet();
+            renderOrdersTable();
+            renderDistributionDriverSelect();
+            document.getElementById('orderIdInput').value = nextOrderId;
+
+            // ربط الأزرار
+            document.getElementById('saveFuelBtn')?.addEventListener('click', ()=>{ saveFleetData();
+                showToast('تم حفظ كفاءة الديزل', 'success'); });
+            document.getElementById('saveAssignmentsBtn')?.addEventListener('click', ()=>{ saveFleetData();
+                showToast('تم حفظ التعيينات', 'success'); });
+            document.getElementById('saveDriversBtn')?.addEventListener('click', ()=>{ localStorage.setItem('fleet_drivers_list', JSON.stringify(driversList));
+                showToast('تم حفظ قائمة السائقين', 'success'); });
+            document.getElementById('saveCodesBtn')?.addEventListener('click', ()=>{ saveFleetData();
+                showToast('تم حفظ الكودات', 'success'); });
+            document.getElementById('savePlatesBtn')?.addEventListener('click', ()=>{ saveFleetData();
+                showToast('تم حفظ اللوحات', 'success'); });
+            document.getElementById('exportFleetBtn')?.addEventListener('click', exportFleetExcel);
+            document.getElementById('exportDriversBtn')?.addEventListener('click', async ()=>{
+                try { const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('السائقين');
+                    ws.columns = [{ header: '#', key: 'index', width: 8 }, { header: 'اسم السائق', key: 'name', width: 30 }];
+                    ws.addRows(driversList.map((d,i)=>({ index:i+1, name:d })));
+                    const buffer = await wb.xlsx.writeBuffer();
+                    saveAs(new Blob([buffer]), `السائقين_${new Date().toISOString().slice(0,10)}.xlsx`);
+                    showToast('تم تصدير السائقين', 'success'); } catch(e) { showToast('خطأ', 'error'); } });
+            document.getElementById('addDriverBtn')?.addEventListener('click', ()=>{
+                const name = document.getElementById('newDriverName')?.value.trim();
+                if (name) { if (!driversList.includes(name)) { driversList.push(name);
+                        driversList.sort();
+                        localStorage.setItem('fleet_drivers_list', JSON.stringify(driversList));
+                        renderAllFleet();
+                        renderDistributionDriverSelect();
+                        showToast(`تمت إضافة السائق ${name}`, 'success'); } else showToast('السائق موجود بالفعل', 'error'); }
+                else showToast('يرجى إدخال اسم', 'error');
+                document.getElementById('newDriverName').value = '';
+            });
+            document.getElementById('addCodeBtn')?.addEventListener('click', ()=>{
+                const code = parseInt(document.getElementById('newCodeInput')?.value);
+                if (code) addCode(code);
+                else showToast('يرجى إدخال كود رقمي', 'error');
+                document.getElementById('newCodeInput').value = '';
+            });
+            document.getElementById('addPlateBtn')?.addEventListener('click', ()=>{
+                const plate = document.getElementById('newPlateInput')?.value.trim();
+                const code = parseInt(document.getElementById('newPlateCodeInput')?.value);
+                if (plate && code) {
+                    if (!codeList.includes(code)) addCode(code);
+                    updatePlate(code, plate);
+                    document.getElementById('newPlateInput').value = '';
+                    document.getElementById('newPlateCodeInput').value = '';
+                } else showToast('يرجى إدخال اللوحة والكود', 'error');
+            });
+            document.getElementById('addOrderBtn')?.addEventListener('click', addOrderFromInput);
+            document.getElementById('exportOrdersBtn')?.addEventListener('click', exportOrdersExcel);
+
+            // API عام للتواصل
+            window.fleetAPI = {
+                getFuelByCode: (c) => getFuelByCode(parseInt(c)),
+                getDriverByCode: (c) => getDriverByCode(parseInt(c)),
+                getPlateByCode: (c) => getPlateByCode(parseInt(c)),
+                getAllCodes: () => [...codeList],
+                getAllDrivers: () => [...driversList],
+                getAllTrucks: () => codeList.map(c => ({ code: c, brand: getTruckByCode(c)?.brand, plate: getPlateByCode(c), driver: getDriverByCode(c) })),
+            };
+        })();
+    </script>
+</body>
+</html>

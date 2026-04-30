@@ -1,0 +1,593 @@
+<!-- views/distribution-quality.ejs -->
+<style>
+  /* أنماط خاصة بصفحة تقرير جودة التوزيع - متوافقة مع النظام */
+  .stats-mini {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .stat-card .number {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--primary);
+  }
+  .executive-summary {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+  }
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .kpi-card {
+    background: var(--bg-sidebar);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    text-align: center;
+  }
+  .kpi-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--primary);
+  }
+  .method-box {
+    background: var(--bg-sidebar);
+    border-right: 4px solid var(--primary);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+  .method-list {
+    list-style: none;
+    margin-top: 0.5rem;
+  }
+  .method-list li {
+    margin-bottom: 0.5rem;
+    padding-right: 1.2rem;
+    position: relative;
+  }
+  .method-list li::before {
+    content: "✓";
+    color: var(--primary);
+    position: absolute;
+    right: 0;
+  }
+  .violation-item {
+    background: var(--bg-input);
+    border-right: 3px solid #f59e0b;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--radius-sm);
+  }
+  .violation-reason {
+    color: #b45309;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+  }
+  .badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 40px;
+    font-size: 0.75rem;
+  }
+  .badge-success { background: #22c55e; color: white; }
+  .badge-warning { background: #f59e0b; color: white; }
+  .badge-danger { background: #ef4444; color: white; }
+  .badge-info { background: #3b82f6; color: white; }
+  .extra-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    background: var(--bg-sidebar);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    margin-top: 1rem;
+  }
+  .extra-stat {
+    flex: 1;
+    text-align: center;
+  }
+  .extra-stat span {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary);
+  }
+  .tabs-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 0.4rem 1.2rem;
+    border-radius: 40px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+  }
+  .tab-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  .violations-section {
+    margin-top: 1.5rem;
+  }
+</style>
+
+<div class="section-head">
+  <h2>📈 تقرير جودة التوزيع اليومي</h2>
+  <span class="pill">تحليل عدالة التوزيع وأسباب المخالفات</span>
+</div>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+  <div class="form-grid" style="margin-bottom: 1rem;">
+    <label>من تاريخ <input type="date" id="startDate" class="form-control"></label>
+    <label>إلى تاريخ <input type="date" id="endDate" class="form-control"></label>
+    <div class="actions">
+      <button class="btn primary" id="loadReportBtn">🔍 عرض التقرير</button>
+      <button class="btn soft" id="exportExcelBtn">📥 Excel</button>
+      <button class="btn soft" id="exportPdfBtn">📄 PDF</button>
+    </div>
+  </div>
+  <div class="quick-filters" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+    <button class="pill quick-filter" data-filter="today">📅 اليوم</button>
+    <button class="pill quick-filter" data-filter="week">📅 أسبوعي</button>
+    <button class="pill quick-filter" data-filter="month">📅 شهري</button>
+  </div>
+</div>
+
+<div id="executiveSummaryContainer"></div>
+
+<!-- تبويبات لعرض المخالفات -->
+<div class="tabs-container">
+  <button class="tab-btn active" data-tab="manual">🖐️ التوزيعات اليدوية</button>
+  <button class="tab-btn" data-tab="reject">❌ حالات الرفض</button>
+  <button class="tab-btn" data-tab="cancel">🗑️ حالات الإلغاء</button>
+</div>
+
+<div id="manualTab" class="violations-section">
+  <div id="manualViolationsList"></div>
+</div>
+<div id="rejectTab" class="violations-section" style="display:none;">
+  <div id="rejectViolationsList"></div>
+</div>
+<div id="cancelTab" class="violations-section" style="display:none;">
+  <div id="cancelViolationsList"></div>
+</div>
+
+<div id="reportContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+  const API_BASE = '/api';
+  let dailyDataStore = [];
+  let violationsData = { manual: [], reject: [], cancel: [] };
+
+  // بيانات مسافات المصانع
+  const FACTORY_DATA = {
+    "مصنع الفهد": { distance: 337.99, time: "3 س و 30 د" },
+    "مصنع قوة معمارية": { distance: 339.87, time: "3 س و 29 د" },
+    "مصنع سارمكس النظيم": { distance: 352.64, time: "3 س و 45 د" },
+    "مصنع القيشان 3": { distance: 396.22, time: "4 س و 8 د" },
+    "مصنع القيشان 1": { distance: 396.22, time: "4 س و 8 د" },
+    "شركة الحارث للمنتجات الاسمنيه حي المنار": { distance: 401.37, time: "4 س و 7 د" },
+    "شركة برينسا للخرسانة الجاهزه": { distance: 403.21, time: "4 س و 19 د" },
+    "مصنع الاحجار الشرقية": { distance: 416.11, time: "4 س و 36 د" },
+    "شركة ابتك للخرسانة الجاهزه": { distance: 418.11, time: "4 س و 20 د" },
+    "شركةالحارث للمنتجات الاسمنتية": { distance: 420.4, time: "4 س و 31 د" },
+    "مصنع باسل أبو الرب وشريكه": { distance: 420.6, time: "4 س و 43 د" },
+    "شركة عبر الخليج": { distance: 427.48, time: "4 س و 42 د" },
+    "مصنع المعجل": { distance: 431.01, time: "4 س و 31 د" },
+    "مصنع نبراس2": { distance: 439.61, time: "4 س و 35 د" },
+    "مصنع دعم وحلول الدرعية": { distance: 441.05, time: "4 س و 47 د" },
+    "مصنع نبراس الخليج": { distance: 448.99, time: "5 س" },
+    "الحارث العزيزية": { distance: 475.49, time: "5 س و 3 د" },
+    "انشاءات دبي": { distance: 522.92, time: "6 س و 3 د" },
+    "الشركة الصينية": { distance: 605.51, time: "7 س و 40 د" },
+    "شركة اعمار": { distance: 662.14, time: "7 س و 38 د" }
+  };
+
+  function getFactoryDistance(factoryName) {
+    if (!factoryName) return 150;
+    if (FACTORY_DATA[factoryName]) return FACTORY_DATA[factoryName].distance;
+    const normalized = factoryName.trim().toLowerCase();
+    for (let key in FACTORY_DATA) {
+      if (key.trim().toLowerCase() === normalized) return FACTORY_DATA[key].distance;
+    }
+    return 150;
+  }
+
+  function formatDateForSheet(dateValue) {
+    if (!dateValue) return '';
+    let d = new Date(dateValue);
+    if (isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function cleanDisplayText(text) {
+    if (!text) return '—';
+    return String(text).trim();
+  }
+
+  async function apiCall(endpoint) {
+    const res = await fetch(`${API_BASE}${endpoint}`, { credentials: 'include' });
+    if (res.status === 401) { window.location.href = '/login'; throw new Error('غير مصرح'); }
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  // جلب بيانات المخالفات من API
+  async function fetchViolationsForDateRange(startDate, endDate) {
+    const violations = { manual: [], reject: [], cancel: [] };
+    let current = new Date(startDate);
+    const end = new Date(endDate);
+    
+    while (current <= end) {
+      const dateKey = formatDateForSheet(current);
+      try {
+        // جلب تقرير الجودة من API
+        const qualityData = await apiCall(`/quality/${dateKey}`);
+        if (qualityData.manualDistributions) {
+          violations.manual.push(...qualityData.manualDistributions.map(v => ({ ...v, date: dateKey })));
+        }
+        if (qualityData.rejectedDistributions) {
+          violations.reject.push(...qualityData.rejectedDistributions.map(v => ({ ...v, date: dateKey })));
+        }
+        if (qualityData.cancelledDistributions) {
+          violations.cancel.push(...qualityData.cancelledDistributions.map(v => ({ ...v, date: dateKey })));
+        }
+      } catch(e) {
+        console.log(`لا توجد بيانات مخالفات ليوم ${dateKey}`);
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    return violations;
+  }
+
+  function analyzeDay(date, orders, distribution) {
+    const dateStr = formatDateForSheet(date);
+    const trucksMap = new Map();
+    const manualOverrides = [];
+
+    distribution.forEach(d => {
+      if (!d.truck) return;
+      const num = d.truck.number;
+      if (!trucksMap.has(num)) {
+        trucksMap.set(num, { number: num, driver: d.truck.driver, trips: 0, totalDistance: 0, roads: [], factories: [], factoryDistances: [] });
+      }
+      const rec = trucksMap.get(num);
+      rec.trips++;
+      const dist = getFactoryDistance(d.factory);
+      rec.totalDistance += dist;
+      rec.roads.push(d.road || 'غير محدد');
+      rec.factories.push(d.factory);
+      rec.factoryDistances.push(dist);
+      if (d.manualOverride === true) {
+        manualOverrides.push({ truckNumber: d.truck.number, driver: d.truck.driver, factory: d.factory, road: d.road, reason: d.overrideReason || 'تدخل يدوي', date: dateStr });
+      }
+    });
+
+    const trucksArray = Array.from(trucksMap.values());
+    const totalTrips = trucksArray.reduce((s,t)=>s+t.trips,0);
+    const trucksWith2Plus = trucksArray.filter(t=>t.trips>=2).length;
+    const trucksWith1 = trucksArray.filter(t=>t.trips===1).length;
+    let distances = trucksArray.map(t=>t.totalDistance);
+    let avgDist = distances.reduce((a,b)=>a+b,0)/(distances.length||1);
+    let variance = distances.reduce((s,d)=>s+Math.pow(d-avgDist,2),0)/(distances.length||1);
+    let stdDev = Math.sqrt(variance);
+    let totalDistanceAll = distances.reduce((a,b)=>a+b,0);
+    return { date: dateStr, totalOrders: orders.length, totalDistributed: distribution.length, trucks: trucksArray, trucksWith2Plus, trucksWith1, avgDistance: avgDist, stdDevDistance: stdDev, totalTrips, totalDistanceAll, manualOverrides };
+  }
+
+  function calculateCompliance(reports) {
+    if (!reports.length) return 0;
+    let totalDriverDays = 0, totalCompliantDays = 0;
+    reports.forEach(r => { r.trucks.forEach(t => { totalDriverDays++; if (t.trips >= 2) totalCompliantDays++; }); });
+    return totalDriverDays ? (totalCompliantDays / totalDriverDays) * 100 : 0;
+  }
+
+  // عرض المخالفات في التبويبات
+  function renderViolations() {
+    // التوزيعات اليدوية
+    const manualDiv = document.getElementById('manualViolationsList');
+    if (violationsData.manual.length === 0) {
+      manualDiv.innerHTML = '<div class="method-box"><p>✅ لا توجد توزيعات يدوية مخالفة</p></div>';
+    } else {
+      manualDiv.innerHTML = `<div class="method-box" style="border-right-color: #f59e0b;">
+        <strong>⚠️ التوزيعات اليدوية المخالفة (${violationsData.manual.length})</strong>
+        ${violationsData.manual.map(v => `
+          <div class="violation-item">
+            <strong>📅 ${v.date}</strong> - 🚛 ${v.truckNumber} (${v.driverName || 'غير محدد'})
+            <div>🏭 ${v.factory} - 🧱 ${v.material}</div>
+            <div class="violation-reason">📝 سبب التوزيع اليدوي: ${v.reason || 'غير محدد'}</div>
+            <div class="text-muted" style="font-size: 0.75rem;">👤 بواسطة: ${v.createdBy || 'غير معروف'} | 🕐 ${new Date(v.createdAt).toLocaleString('ar-SA')}</div>
+          </div>
+        `).join('')}
+      </div>`;
+    }
+
+    // حالات الرفض
+    const rejectDiv = document.getElementById('rejectViolationsList');
+    if (violationsData.reject.length === 0) {
+      rejectDiv.innerHTML = '<div class="method-box"><p>✅ لا توجد حالات رفض</p></div>';
+    } else {
+      rejectDiv.innerHTML = `<div class="method-box" style="border-right-color: #ef4444;">
+        <strong>❌ حالات الرفض (${violationsData.reject.length})</strong>
+        ${violationsData.reject.map(v => `
+          <div class="violation-item">
+            <strong>📅 ${v.date}</strong> - 🚛 سيارة رقم ${v.truck_id}
+            <div class="violation-reason">📝 سبب الرفض: ${v.reason || 'غير محدد'}</div>
+            <div class="text-muted" style="font-size: 0.75rem;">👤 بواسطة: ${v.rejected_by || 'غير معروف'} | 🕐 ${new Date(v.rejected_at).toLocaleString('ar-SA')}</div>
+          </div>
+        `).join('')}
+      </div>`;
+    }
+
+    // حالات الإلغاء
+    const cancelDiv = document.getElementById('cancelViolationsList');
+    if (violationsData.cancel.length === 0) {
+      cancelDiv.innerHTML = '<div class="method-box"><p>✅ لا توجد حالات إلغاء</p></div>';
+    } else {
+      cancelDiv.innerHTML = `<div class="method-box" style="border-right-color: #ef4444;">
+        <strong>🗑️ حالات الإلغاء (${violationsData.cancel.length})</strong>
+        ${violationsData.cancel.map(v => `
+          <div class="violation-item">
+            <strong>📅 ${v.date}</strong> - 📋 طلب رقم ${v.order_id}
+            <div class="violation-reason">📝 سبب الإلغاء: ${v.reason || 'غير محدد'}</div>
+            <div class="text-muted" style="font-size: 0.75rem;">👤 بواسطة: ${v.cancelled_by || 'غير معروف'} | 🕐 ${new Date(v.cancelled_at).toLocaleString('ar-SA')}</div>
+          </div>
+        `).join('')}
+      </div>`;
+    }
+  }
+
+  // تبديل التبويبات
+  function setupTabs() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach(tab => {
+      tab.onclick = () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const tabId = tab.getAttribute('data-tab');
+        document.getElementById('manualTab').style.display = tabId === 'manual' ? 'block' : 'none';
+        document.getElementById('rejectTab').style.display = tabId === 'reject' ? 'block' : 'none';
+        document.getElementById('cancelTab').style.display = tabId === 'cancel' ? 'block' : 'none';
+      };
+    });
+  }
+
+  async function generateExecutiveSummary(reports, startDate, endDate) {
+    if (!reports.length) return '<div class="executive-summary"><p>⚠️ لا توجد بيانات</p></div>';
+    let compliancePercent = calculateCompliance(reports);
+    
+    let totalOrdersAll = 0, totalTripsAll = 0, totalTrucksUnique = new Set();
+    let totalTrucksWith2Plus = 0, totalTrucksWith1 = 0;
+    let totalDistanceAll = 0;
+    reports.forEach(r => {
+      totalOrdersAll += r.totalOrders;
+      totalTripsAll += r.totalTrips;
+      totalTrucksWith2Plus += r.trucksWith2Plus;
+      totalTrucksWith1 += r.trucksWith1;
+      r.trucks.forEach(t => totalTrucksUnique.add(t.number));
+      totalDistanceAll += r.totalDistanceAll || 0;
+    });
+    const totalUniqueTrucks = totalTrucksUnique.size;
+    
+    return `<div class="executive-summary" id="executiveSummary">
+      <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+        <h2>📊 ملخص الأداء التنفيذي</h2>
+        <div>📅 ${startDate} → ${endDate}</div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-value">${totalOrdersAll}</div><div class="kpi-label">إجمالي الطلبات</div></div>
+        <div class="kpi-card"><div class="kpi-value">${totalTripsAll}</div><div class="kpi-label">الرحلات المنفذة</div></div>
+        <div class="kpi-card"><div class="kpi-value">${totalUniqueTrucks}</div><div class="kpi-label">سيارات عاملة</div></div>
+        <div class="kpi-card"><div class="kpi-value">${totalTrucksWith2Plus}</div><div class="kpi-label">حققت رودين+</div></div>
+        <div class="kpi-card"><div class="kpi-value">${totalTrucksWith1}</div><div class="kpi-label">حققت رود واحد</div></div>
+        <div class="kpi-card"><div class="kpi-value" style="color: var(--warning);">${compliancePercent.toFixed(1)}%</div><div class="kpi-label">نسبة الالتزام بالهدف</div></div>
+        <div class="kpi-card"><div class="kpi-value">${totalDistanceAll.toFixed(1)} كم</div><div class="kpi-label">إجمالي المسافات</div></div>
+        <div class="kpi-card">
+          <div class="kpi-value" style="color: #f59e0b;">${violationsData.manual.length}</div>
+          <div class="kpi-label">🖐️ توزيعات يدوية</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" style="color: #ef4444;">${violationsData.reject.length}</div>
+          <div class="kpi-label">❌ حالات رفض</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" style="color: #ef4444;">${violationsData.cancel.length}</div>
+          <div class="kpi-label">🗑️ حالات إلغاء</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function renderDailyReport(report) {
+    let trucksTable = `<div class="table-wrap"><table><thead><tr><th>رقم السيارة</th><th>السائق</th><th>عدد الرحلات</th><th>الروودات</th><th>المصانع (مع المسافة)</th><th>المسافة الكلية</th><th>التقييم</th></tr></thead><tbody>`;
+    report.trucks.forEach(t => {
+      let roadsStr = t.roads.join(', ');
+      let factoriesWithDist = t.factories.map((f, idx) => `<span title="مسافة الرحلة: ${t.factoryDistances[idx]} كم">${f} (${t.factoryDistances[idx]} كم)</span>`).join(' → ');
+      let evaluation = t.trips >= 2 ? '<span class="badge badge-success">مستوفٍ</span>' : (t.trips === 1 ? '<span class="badge badge-warning">رود واحد</span>' : '<span class="badge badge-danger">بدون رحلات</span>');
+      trucksTable += `<tr><td>${cleanDisplayText(t.number)}</td><td>${cleanDisplayText(t.driver)}</td><td>${t.trips}</td><td>${cleanDisplayText(roadsStr)}</td><td>${factoriesWithDist}</td><td>${t.totalDistance.toFixed(1)}</td><td>${evaluation}</td></tr>`;
+    });
+    trucksTable += `</tbody></table></div>`;
+    return `<div style="margin-bottom: 2rem; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1rem;">
+      <div style="font-size: 1.2rem; margin-bottom: 1rem; color: var(--primary);">📅 ${report.date}</div>
+      <div class="stats-mini">
+        <div class="stat-card"><h4>📦 الطلبات</h4><div class="number">${report.totalOrders}</div></div>
+        <div class="stat-card"><h4>✅ تم توزيعها</h4><div class="number">${report.totalDistributed}</div></div>
+        <div class="stat-card"><h4>🚛 مستوفية</h4><div class="number">${report.trucksWith2Plus}</div></div>
+        <div class="stat-card"><h4>⚠️ رود واحد</h4><div class="number">${report.trucksWith1}</div></div>
+      </div>
+      ${trucksTable}
+    </div>`;
+  }
+
+  async function loadQualityReport() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    if (!startDate || !endDate) { showToast('يرجى اختيار الفترة', 'error'); return; }
+    showLoading(true);
+    try {
+      // جلب المخالفات
+      violationsData = await fetchViolationsForDateRange(startDate, endDate);
+      renderViolations();
+      
+      // جلب بيانات التوزيع العادية
+      let rangeData = null;
+      try {
+        const rangeRes = await fetch(`${API_BASE}/range/${startDate}/${endDate}`, { credentials: 'include' });
+        if (rangeRes.ok) rangeData = await rangeRes.json();
+      } catch(e) {}
+      
+      let reports = [];
+      if (rangeData) {
+        for (const [date, data] of Object.entries(rangeData)) {
+          reports.push(analyzeDay(date, data.orders || [], data.distribution || []));
+        }
+        reports.sort((a,b)=>a.date.localeCompare(b.date));
+      } else {
+        let dates = [];
+        let current = new Date(startDate);
+        let end = new Date(endDate);
+        while (current <= end) { dates.push(current.toISOString().split('T')[0]); current.setDate(current.getDate()+1); }
+        for (let date of dates) {
+          try {
+            const data = await apiCall(`/day/${date}`);
+            reports.push(analyzeDay(date, data.orders || [], data.distribution || []));
+          } catch(e) { reports.push(analyzeDay(date, [], [])); }
+        }
+      }
+      dailyDataStore = reports;
+      const execHtml = await generateExecutiveSummary(reports, startDate, endDate);
+      document.getElementById('executiveSummaryContainer').innerHTML = execHtml;
+      let html = '';
+      for (let r of reports) html += renderDailyReport(r);
+      document.getElementById('reportContainer').innerHTML = html;
+    } catch(e) { showToast(e.message, 'error'); }
+    showLoading(false);
+  }
+
+  async function exportToExcel() {
+    if (!dailyDataStore.length) { showToast('لا توجد بيانات', 'error'); return; }
+    showLoading(true);
+    try {
+      const ExcelJS = window.ExcelJS;
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('جودة التوزيع');
+      sheet.getCell('A1').value = 'تقرير جودة التوزيع';
+      const buffer = await workbook.xlsx.writeBuffer();
+      saveAs(new Blob([buffer]), `جودة_التوزيع_${formatDateForSheet(new Date())}.xlsx`);
+      showToast('✅ تم التصدير', 'success');
+    } catch(e) { showToast('خطأ: '+e.message, 'error'); }
+    showLoading(false);
+  }
+
+  async function exportExecutivePDF() {
+    const el = document.getElementById('executiveSummary');
+    if (!el) { showToast('لا يوجد تقرير', 'error'); return; }
+    showLoading(true);
+    try {
+      const { jsPDF } = window.jspdf;
+      const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.save(`التقرير_التنفيذي_${formatDateForSheet(new Date())}.pdf`);
+      showToast('✅ تم التصدير', 'success');
+    } catch(e) { showToast('خطأ: '+e.message, 'error'); }
+    showLoading(false);
+  }
+
+  function setQuickFilter(type) {
+    const today = new Date();
+    let start, end;
+    switch(type) {
+      case 'today': start = end = today; break;
+      case 'week': start = new Date(today); start.setDate(today.getDate()-6); end = today; break;
+      case 'month': start = new Date(today.getFullYear(), today.getMonth(), 1); end = today; break;
+      default: return;
+    }
+    document.getElementById('startDate').value = formatDateForSheet(start);
+    document.getElementById('endDate').value = formatDateForSheet(end);
+    loadQualityReport();
+  }
+
+  function showToast(msg, type) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.position = 'fixed';
+      container.style.top = '20px';
+      container.style.left = '20px';
+      container.style.zIndex = '3000';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerText = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function showLoading(show) {
+    let loader = document.getElementById('globalLoader');
+    if (!loader) {
+      loader = document.createElement('div');
+      loader.id = 'globalLoader';
+      loader.style.position = 'fixed';
+      loader.style.top = '0';
+      loader.style.left = '0';
+      loader.style.width = '100%';
+      loader.style.height = '100%';
+      loader.style.background = 'rgba(0,0,0,0.6)';
+      loader.style.display = 'flex';
+      loader.style.alignItems = 'center';
+      loader.style.justifyContent = 'center';
+      loader.style.zIndex = '9999';
+      loader.innerHTML = '<div class="spinner"></div>';
+      document.body.appendChild(loader);
+    }
+    loader.style.display = show ? 'flex' : 'none';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    document.getElementById('startDate').value = todayStr;
+    document.getElementById('endDate').value = todayStr;
+    setupTabs();
+    loadQualityReport();
+
+    document.getElementById('loadReportBtn').onclick = loadQualityReport;
+    document.getElementById('exportExcelBtn').onclick = exportToExcel;
+    document.getElementById('exportPdfBtn').onclick = exportExecutivePDF;
+    document.querySelectorAll('.quick-filter').forEach(btn => {
+      btn.onclick = () => setQuickFilter(btn.getAttribute('data-filter'));
+    });
+  });
+</script>

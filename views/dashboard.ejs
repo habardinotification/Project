@@ -1,0 +1,592 @@
+<!-- views/dashboard.ejs -->
+<!-- داشبورد رئيسية متكاملة - بيانات الطلبات والتوزيع والديزل والإحصائيات -->
+<style>
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .stat-card {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 1.25rem;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+  }
+  
+  .stat-card.primary {
+    border-right: 4px solid var(--primary);
+  }
+  
+  .stat-card.success {
+    border-right: 4px solid #10b981;
+  }
+  
+  .stat-card.warning {
+    border-right: 4px solid #f59e0b;
+  }
+  
+  .stat-card.info {
+    border-right: 4px solid #3b82f6;
+  }
+  
+  .stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .stat-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .stat-icon {
+    font-size: 2rem;
+    opacity: 0.3;
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+  
+  .stat-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  
+  .details-table {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+  
+  .details-table h4 {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .factory-item, .material-item, .truck-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.85rem;
+  }
+  
+  .factory-name, .material-name, .truck-number {
+    font-weight: 500;
+  }
+  
+  .factory-count, .material-count, .truck-loads {
+    font-weight: 700;
+    color: var(--primary);
+  }
+  
+  .progress-bar {
+    background: var(--bg-input);
+    border-radius: 10px;
+    height: 6px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+  }
+  
+  .progress-fill {
+    background: var(--primary);
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s;
+  }
+  
+  .fuel-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+  
+  .fuel-item {
+    text-align: center;
+    padding: 0.5rem;
+    background: var(--bg-input);
+    border-radius: 12px;
+  }
+  
+  .fuel-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  
+  .fuel-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+  
+  .refresh-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.3s;
+    z-index: 100;
+  }
+  
+  .refresh-btn:hover {
+    transform: rotate(180deg);
+  }
+  
+  @media (max-width: 768px) {
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    .stat-value {
+      font-size: 1.5rem;
+    }
+  }
+</style>
+
+<div class="dashboard-container">
+  <!-- عنوان الصفحة -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1>📊 لوحة التحكم الرئيسية</h1>
+      <p style="color: var(--text-muted); font-size: 0.85rem;">نظرة عامة على أداء الكسارة والطلبات والتوزيع</p>
+    </div>
+    <div>
+      <select id="dateSelect" class="form-control" style="width: auto; display: inline-block;">
+        <option value="today">📅 اليوم</option>
+        <option value="yesterday">📆 أمس</option>
+        <option value="week">📊 آخر 7 أيام</option>
+      </select>
+      <input type="date" id="customDate" class="form-control" style="width: auto; display: inline-block; margin-right: 0.5rem;">
+    </div>
+  </div>
+
+  <!-- بطاقات الإحصائيات الرئيسية -->
+  <div class="dashboard-grid">
+    <!-- عدد الطلبات -->
+    <div class="stat-card primary">
+      <div class="stat-header">
+        <span class="stat-title">الطلبات</span>
+        <span class="stat-icon">📝</span>
+      </div>
+      <div class="stat-value" id="totalOrders">0</div>
+      <div class="stat-subtitle">إجمالي عدد الطلبات</div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="ordersProgress" style="width: 0%"></div>
+      </div>
+      <div class="stat-subtitle" id="ordersTarget">0 من 0 مستهدف</div>
+    </div>
+
+    <!-- عدد الرحلات الموزعة -->
+    <div class="stat-card success">
+      <div class="stat-header">
+        <span class="stat-title">الرحلات الموزعة</span>
+        <span class="stat-icon">🚛</span>
+      </div>
+      <div class="stat-value" id="distributedTrips">0</div>
+      <div class="stat-subtitle">رحلات تم توزيعها على السيارات</div>
+    </div>
+
+    <!-- عدد السيارات النشطة -->
+    <div class="stat-card info">
+      <div class="stat-header">
+        <span class="stat-title">السيارات النشطة</span>
+        <span class="stat-icon">🚚</span>
+      </div>
+      <div class="stat-value" id="activeTrucks">0</div>
+      <div class="stat-subtitle">سيارة تعمل حالياً</div>
+    </div>
+
+    <!-- استهلاك الديزل -->
+    <div class="stat-card warning">
+      <div class="stat-header">
+        <span class="stat-title">استهلاك الديزل</span>
+        <span class="stat-icon">⛽</span>
+      </div>
+      <div class="stat-value" id="fuelConsumption">0</div>
+      <div class="stat-subtitle">لتر ديزل اليوم</div>
+    </div>
+  </div>
+
+  <!-- تفاصيل إضافية -->
+  <div class="dashboard-grid">
+    <!-- إحصائيات المصانع -->
+    <div class="details-table">
+      <h4>🏭 أكثر المصانع طلباً</h4>
+      <div id="topFactories"></div>
+    </div>
+
+    <!-- إحصائيات أنواع البحص -->
+    <div class="details-table">
+      <h4>🧱 أكثر أنواع البحص طلباً</h4>
+      <div id="topMaterials"></div>
+    </div>
+
+    <!-- إحصائيات الديزل -->
+    <div class="details-table">
+      <h4>⛽ إحصائيات الديزل</h4>
+      <div id="fuelDetails"></div>
+    </div>
+
+    <!-- أداء السيارات -->
+    <div class="details-table">
+      <h4>🚛 أداء السيارات</h4>
+      <div id="topTrucks"></div>
+    </div>
+  </div>
+
+  <!-- ملخص التوزيع -->
+  <div class="details-table" style="margin-top: 1rem;">
+    <h4>📋 ملخص توزيع الرحلات</h4>
+    <div id="distributionSummary"></div>
+  </div>
+</div>
+
+<!-- زر تحديث -->
+<button class="refresh-btn" onclick="refreshDashboard()">🔄</button>
+
+<script>
+  const API_BASE = '/api';
+  let currentData = {
+    orders: [],
+    distribution: [],
+    settings: null,
+    savedReports: [],
+    fuelStats: null
+  };
+  let currentDate = new Date().toISOString().split('T')[0];
+
+  // دوال مساعدة
+  async function apiCall(endpoint, method = 'GET', data = null) {
+    const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+    if (data) options.body = JSON.stringify(data);
+    const res = await fetch(`${API_BASE}${endpoint}`, options);
+    if (res.status === 401) { window.location.href = '/login'; throw new Error('غير مصرح'); }
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  // تحميل البيانات من مصادر متعددة
+  async function loadDashboardData() {
+    showLoading(true);
+    try {
+      // 1. تحميل بيانات اليوم من الطلبات والتوزيع
+      const dayData = await apiCall(`/day/${currentDate}`);
+      currentData.orders = dayData.orders || [];
+      currentData.distribution = dayData.distribution || [];
+
+      // 2. تحميل إعدادات النظام (للسیارات والمصانع)
+      currentData.settings = await apiCall('/settings');
+
+      // 3. تحميل التقارير المحفوظة لإحصائيات الديزل
+      try {
+        const savedReports = await apiCall('/saved-reports');
+        currentData.savedReports = savedReports.reports || [];
+        // استخراج إحصائيات الديزل من أحدث تقرير
+        const latestReport = currentData.savedReports
+          .filter(r => r.type === 'fuel' || r.type === 'analytical')
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        if (latestReport && latestReport.data) {
+          currentData.fuelStats = latestReport.data.fuelStats || latestReport.data;
+        }
+      } catch(e) { console.warn('Failed to load saved reports:', e); }
+
+      // 4. إذا لم توجد تقارير محفوظة، نحاول جلب بيانات الديزل من analytics endpoint
+      if (!currentData.fuelStats) {
+        try {
+          const analytics = await apiCall('/analytics/fuel-summary');
+          currentData.fuelStats = analytics;
+        } catch(e) { console.warn('Failed to load fuel analytics:', e); }
+      }
+
+      renderDashboard();
+    } catch(error) {
+      console.error('Error loading dashboard:', error);
+      showToast('خطأ في تحميل البيانات', 'error');
+    }
+    showLoading(false);
+  }
+
+  // عرض الداشبورد
+  function renderDashboard() {
+    const orders = currentData.orders;
+    const distribution = currentData.distribution;
+    const settings = currentData.settings;
+    const fuelStats = currentData.fuelStats;
+
+    // 1. عدد الطلبات
+    const totalOrders = orders.length;
+    document.getElementById('totalOrders').textContent = totalOrders;
+    
+    // هدف وهمي (يمكن تعديله حسب احتياجاتك)
+    const dailyTarget = 50;
+    const targetPercent = Math.min((totalOrders / dailyTarget) * 100, 100);
+    document.getElementById('ordersProgress').style.width = `${targetPercent}%`;
+    document.getElementById('ordersTarget').textContent = `${totalOrders} من ${dailyTarget} مستهدف`;
+
+    // 2. عدد الرحلات الموزعة
+    const distributedTrips = distribution.length;
+    document.getElementById('distributedTrips').textContent = distributedTrips;
+
+    // 3. عدد السيارات النشطة (من التوزيع)
+    const activeTrucks = new Set(distribution.map(d => d.truck?.number || d.truck)).size;
+    document.getElementById('activeTrucks').textContent = activeTrucks || 0;
+
+    // 4. استهلاك الديزل من التقارير المحفوظة أو الإحصائيات
+    let fuelConsumption = 0;
+    if (fuelStats) {
+      fuelConsumption = fuelStats.dailyConsumption || fuelStats.totalConsumption || fuelStats.consumption || 0;
+    }
+    // إذا لم توجد بيانات ديزل، نحسب تقدير: 20 لتر لكل رحلة
+    if (fuelConsumption === 0 && distributedTrips > 0) {
+      fuelConsumption = distributedTrips * 20;
+    }
+    document.getElementById('fuelConsumption').textContent = fuelConsumption.toLocaleString();
+
+    // 5. أكثر المصانع طلباً
+    const factoryCount = {};
+    orders.forEach(order => {
+      factoryCount[order.factory] = (factoryCount[order.factory] || 0) + 1;
+    });
+    const topFactories = Object.entries(factoryCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    const topFactoriesHtml = topFactories.map(([name, count]) => `
+      <div class="factory-item">
+        <span class="factory-name">🏭 ${name}</span>
+        <span class="factory-count">${count} طلب</span>
+      </div>
+    `).join('');
+    document.getElementById('topFactories').innerHTML = topFactoriesHtml || '<div class="factory-item">لا توجد بيانات</div>';
+
+    // 6. أكثر أنواع البحص طلباً
+    const materialCount = {};
+    orders.forEach(order => {
+      materialCount[order.material] = (materialCount[order.material] || 0) + 1;
+    });
+    const topMaterials = Object.entries(materialCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    const topMaterialsHtml = topMaterials.map(([name, count]) => `
+      <div class="material-item">
+        <span class="material-name">🧱 ${name}</span>
+        <span class="material-count">${count} طلب</span>
+      </div>
+    `).join('');
+    document.getElementById('topMaterials').innerHTML = topMaterialsHtml || '<div class="material-item">لا توجد بيانات</div>';
+
+    // 7. تفاصيل الديزل
+    let fuelDetailsHtml = '';
+    if (fuelStats) {
+      fuelDetailsHtml = `
+        <div class="fuel-stats">
+          <div class="fuel-item">
+            <div class="fuel-value">${fuelStats.averageConsumption || '—'}</div>
+            <div class="fuel-label">متوسط/رحلة</div>
+          </div>
+          <div class="fuel-item">
+            <div class="fuel-value">${fuelStats.totalTrips || distributedTrips || 0}</div>
+            <div class="fuel-label">إجمالي الرحلات</div>
+          </div>
+          <div class="fuel-item">
+            <div class="fuel-value">${fuelStats.totalCost ? fuelStats.totalCost + ' ر.س' : '—'}</div>
+            <div class="fuel-label">التكلفة الإجمالية</div>
+          </div>
+          <div class="fuel-item">
+            <div class="fuel-value">${fuelStats.efficiency || '—'}</div>
+            <div class="fuel-label">كفاءة الاستهلاك</div>
+          </div>
+        </div>
+      `;
+    } else {
+      fuelDetailsHtml = '<div class="factory-item">لا توجد بيانات ديزل متاحة</div>';
+    }
+    document.getElementById('fuelDetails').innerHTML = fuelDetailsHtml;
+
+    // 8. أداء السيارات (أكثر السيارات نشاطاً من التوزيع)
+    const truckLoads = {};
+    distribution.forEach(item => {
+      const truckNum = item.truck?.number || item.truck;
+      if (truckNum) {
+        truckLoads[truckNum] = (truckLoads[truckNum] || 0) + 1;
+      }
+    });
+    const topTrucks = Object.entries(truckLoads)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    const topTrucksHtml = topTrucks.map(([number, loads]) => `
+      <div class="truck-item">
+        <span class="truck-number">🚛 سيارة ${number}</span>
+        <span class="truck-loads">${loads} رحلة</span>
+      </div>
+    `).join('');
+    document.getElementById('topTrucks').innerHTML = topTrucksHtml || '<div class="truck-item">لا توجد بيانات</div>';
+
+    // 9. ملخص التوزيع
+    const roads = {};
+    distribution.forEach(item => {
+      const road = item.road || 1;
+      roads[road] = (roads[road] || 0) + 1;
+    });
+    const distributionHtml = Object.entries(roads)
+      .sort((a, b) => a[0] - b[0])
+      .map(([road, count]) => `
+        <div class="factory-item">
+          <span class="factory-name">🚦 الرحلة رقم ${road}</span>
+          <span class="factory-count">${count} طلب</span>
+        </div>
+      `).join('');
+    document.getElementById('distributionSummary').innerHTML = distributionHtml || '<div class="factory-item">لا توجد توزيعات</div>';
+  }
+
+  // تحديث الداشبورد
+  async function refreshDashboard() {
+    await loadDashboardData();
+    showToast('✅ تم تحديث البيانات', 'success');
+  }
+
+  // تغيير التاريخ
+  function changeDate() {
+    const select = document.getElementById('dateSelect');
+    const customDateInput = document.getElementById('customDate');
+    
+    if (select.value === 'custom') {
+      if (customDateInput.value) {
+        currentDate = customDateInput.value;
+        loadDashboardData();
+      }
+    } else if (select.value === 'today') {
+      currentDate = new Date().toISOString().split('T')[0];
+      loadDashboardData();
+    } else if (select.value === 'yesterday') {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      currentDate = yesterday.toISOString().split('T')[0];
+      loadDashboardData();
+    } else if (select.value === 'week') {
+      // للأسبوع، نأخذ متوسط البيانات
+      loadWeeklyData();
+    }
+  }
+
+  // تحميل بيانات الأسبوع
+  async function loadWeeklyData() {
+    showLoading(true);
+    try {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const endDate = new Date();
+      
+      let allOrders = [];
+      let allDistribution = [];
+      
+      // جمع بيانات الأسبوع
+      for (let d = new Date(weekAgo); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        try {
+          const dayData = await apiCall(`/day/${dateStr}`);
+          allOrders = [...allOrders, ...(dayData.orders || [])];
+          allDistribution = [...allDistribution, ...(dayData.distribution || [])];
+        } catch(e) { console.warn(`No data for ${dateStr}`); }
+      }
+      
+      currentData.orders = allOrders;
+      currentData.distribution = allDistribution;
+      renderDashboard();
+    } catch(e) { showToast('خطأ في تحميل بيانات الأسبوع', 'error'); }
+    showLoading(false);
+  }
+
+  function showToast(msg, type) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.cssText = 'position:fixed;bottom:20px;left:20px;z-index:3000;display:flex;flex-direction:column;gap:8px;';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
+    toast.style.cssText = `background:${bgColor};color:white;padding:0.5rem 1rem;border-radius:8px;font-size:0.8rem;animation:slideIn 0.3s ease;`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function showLoading(show) {
+    let loader = document.getElementById('globalLoader');
+    if (!loader && show) {
+      loader = document.createElement('div');
+      loader.id = 'globalLoader';
+      loader.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+      loader.innerHTML = '<div style="background:white;padding:1rem;border-radius:50%;">⏳</div>';
+      document.body.appendChild(loader);
+    }
+    if (loader) loader.style.display = show ? 'flex' : 'none';
+  }
+
+  // تهيئة الصفحة
+  document.addEventListener('DOMContentLoaded', () => {
+    const dateSelect = document.getElementById('dateSelect');
+    const customDate = document.getElementById('customDate');
+    
+    dateSelect.addEventListener('change', () => {
+      if (dateSelect.value === 'custom') {
+        customDate.style.display = 'inline-block';
+        customDate.value = new Date().toISOString().split('T')[0];
+      } else {
+        customDate.style.display = 'none';
+        changeDate();
+      }
+    });
+    
+    customDate.addEventListener('change', () => {
+      if (dateSelect.value === 'custom') {
+        currentDate = customDate.value;
+        loadDashboardData();
+      }
+    });
+    
+    customDate.style.display = 'none';
+    
+    // تحميل البيانات الأولية
+    loadDashboardData();
+    
+    // تحديث تلقائي كل 30 ثانية
+    setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadDashboardData();
+      }
+    }, 30000);
+  });
+</script>

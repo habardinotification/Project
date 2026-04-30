@@ -1,0 +1,352 @@
+<!-- views/factories.ejs -->
+<style>
+  /* أنماط إضافية خاصة بصفحة المصانع – متوافقة مع النظام */
+  .factories-form {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .factories-table {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    overflow-x: auto;
+  }
+  @media (max-width: 768px) {
+    .form-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+  .priority-select {
+    width: 80px;
+    padding: 0.25rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+  }
+</style>
+
+<div class="factories-form">
+  <div class="section-head"><h2>➕ إضافة مصنع جديد</h2></div>
+  <div class="form-row" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+    <div class="form-group" style="flex: 2;">
+      <label>🏭 اسم المصنع</label>
+      <input type="text" id="factoryName" class="form-control" placeholder="مثال: مصنع الفهد">
+    </div>
+    <div class="form-group" style="flex: 1;">
+      <label>📏 المسافة (كم)</label>
+      <input type="number" id="factoryDistance" step="0.01" class="form-control" placeholder="المسافة الكلية ذهاب وعودة">
+    </div>
+    <div class="form-group" style="flex: 1;">
+      <label>📍 الموقع</label>
+      <select id="factoryLocation" class="form-control">
+        <option value="الرياض">الرياض</option>
+        <option value="الدمام">الدمام</option>
+        <option value="جدة">جدة</option>
+        <option value="أخرى">أخرى</option>
+      </select>
+    </div>
+    <div class="form-group" style="flex: 1;">
+      <label>⭐ الأولوية (1 = أعلى)</label>
+      <select id="factoryPriority" class="form-control priority-select">
+        <option value="1">1 (أعلى)</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5 (أدنى)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <button class="btn primary" id="addFactoryBtn">➕ إضافة</button>
+    </div>
+  </div>
+</div>
+
+<div class="factories-table">
+  <div class="section-head"><h2>📋 قائمة المصانع والمسافات</h2><span class="pill" id="factoriesCount">0</span></div>
+  <div class="table-wrap">
+    <table id="factoriesTable">
+      <thead>
+        <tr><th>#</th><th>اسم المصنع</th><th>المسافة (كم)</th><th>الموقع</th><th>⭐ الأولوية</th><th>إجراءات</th></tr>
+      </thead>
+      <tbody id="factoriesBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- مودال التعديل -->
+<div class="modal" id="editFactoryModal">
+  <div class="modal-content">
+    <div class="modal-header"><h3>✏️ تعديل المصنع</h3><button class="close-modal" onclick="closeModal('editFactoryModal')">&times;</button></div>
+    <input type="hidden" id="editFactoryIndex">
+    <div class="form-group"><label>اسم المصنع</label><input type="text" id="editFactoryName" class="form-control"></div>
+    <div class="form-group"><label>المسافة (كم)</label><input type="number" id="editFactoryDistance" step="0.01" class="form-control"></div>
+    <div class="form-group"><label>الموقع</label>
+      <select id="editFactoryLocation" class="form-control">
+        <option value="الرياض">الرياض</option>
+        <option value="الدمام">الدمام</option>
+        <option value="جدة">جدة</option>
+        <option value="أخرى">أخرى</option>
+      </select>
+    </div>
+    <div class="form-group"><label>⭐ الأولوية (1 = أعلى)</label>
+      <select id="editFactoryPriority" class="form-control priority-select">
+        <option value="1">1 (أعلى)</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5 (أدنى)</option>
+      </select>
+    </div>
+    <div class="modal-footer"><button class="btn soft" onclick="closeModal('editFactoryModal')">إلغاء</button><button class="btn primary" id="saveEditBtn">حفظ</button></div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = '/api';
+  let factories = [];
+
+  // ==================== قائمة المصانع الافتراضية (مع المسافات الصحيحة + الأولوية الافتراضية 2) ====================
+  const DEFAULT_FACTORIES_MAP = new Map([
+    ["مصنع الفهد", { distance: 337.99, location: "الرياض", priority: 2 }],
+    ["مصنع قوة معمارية", { distance: 339.87, location: "الدمام", priority: 2 }],
+    ["مصنع سارمكس النظيم", { distance: 352.64, location: "الرياض", priority: 2 }],
+    ["مصنع القيشان 3", { distance: 396.22, location: "الدمام", priority: 2 }],
+    ["مصنع القيشان 1", { distance: 396.22, location: "الدمام", priority: 2 }],
+    ["شركة الحارث للمنتجات الاسمنيه حي المنار", { distance: 401.37, location: "الدمام", priority: 2 }],
+    ["شركة برينسا للخرسانة الجاهزه", { distance: 403.21, location: "الدمام", priority: 2 }],
+    ["مصنع الاحجار الشرقية", { distance: 416.11, location: "الدمام", priority: 2 }],
+    ["شركة ابتك للخرسانة الجاهزه", { distance: 418.11, location: "الدمام", priority: 2 }],
+    ["شركةالحارث للمنتجات الاسمنتية", { distance: 420.4, location: "الدمام", priority: 2 }],
+    ["مصنع باسل أبو الرب وشريكه", { distance: 420.6, location: "الدمام", priority: 2 }],
+    ["شركة عبر الخليج", { distance: 427.48, location: "الرياض", priority: 2 }],
+    ["مصنع المعجل", { distance: 431.01, location: "الدمام", priority: 2 }],
+    ["مصنع نبراس2", { distance: 439.61, location: "الدمام", priority: 2 }],
+    ["مصنع دعم وحلول الدرعية", { distance: 441.05, location: "الرياض", priority: 2 }],
+    ["مصنع نبراس الخليج", { distance: 448.99, location: "الدمام", priority: 2 }],
+    ["الحارث العزيزية", { distance: 475.49, location: "الدمام", priority: 2 }],
+    ["انشاءات دبي", { distance: 522.92, location: "الدمام", priority: 2 }],
+    ["الشركة الصينية", { distance: 605.51, location: "الجبيل", priority: 2 }],
+    ["شركة اعمار", { distance: 662.14, location: "الدمام", priority: 2 }]
+  ]);
+  // ========================================================================
+
+  async function apiCall(endpoint, method = 'GET', data = null) {
+    const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+    if (data && (method === 'POST' || method === 'PUT')) options.body = JSON.stringify(data);
+    const res = await fetch(`${API_BASE}${endpoint}`, options);
+    if (res.status === 401) { window.location.href = '/login'; throw new Error('غير مصرح'); }
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function loadFactories() {
+    showLoading(true);
+    try {
+      const settings = await apiCall('/settings');
+      let existingFactories = settings.factories || [];
+      if (existingFactories.length === 0) {
+        factories = Array.from(DEFAULT_FACTORIES_MAP.entries()).map(([name, data]) => ({
+          name: name,
+          distance: data.distance,
+          location: data.location,
+          priority: data.priority || 2
+        }));
+        await saveFactories();
+      } else {
+        factories = existingFactories.map(f => {
+          const defaultData = DEFAULT_FACTORIES_MAP.get(f.name);
+          if (defaultData) {
+            return {
+              name: f.name,
+              distance: defaultData.distance,
+              location: defaultData.location,
+              priority: f.priority !== undefined ? f.priority : (defaultData.priority || 2)
+            };
+          } else {
+            return {
+              name: f.name,
+              distance: f.distance || 150,
+              location: f.location || 'أخرى',
+              priority: f.priority || 2
+            };
+          }
+        });
+        await saveFactories();
+      }
+      renderFactoriesTable();
+    } catch(e) {
+      console.error(e);
+      showToast('خطأ في تحميل البيانات، يتم استخدام القيم الافتراضية محلياً', 'error');
+      factories = Array.from(DEFAULT_FACTORIES_MAP.entries()).map(([name, data]) => ({
+        name: name,
+        distance: data.distance,
+        location: data.location,
+        priority: data.priority || 2
+      }));
+      renderFactoriesTable();
+    }
+    showLoading(false);
+  }
+
+  function renderFactoriesTable() {
+    const tbody = document.getElementById('factoriesBody');
+    if (!factories.length) { tbody.innerHTML = '<tr><td colspan="6" class="muted center">لا توجد مصانع</td></tr>'; document.getElementById('factoriesCount').innerText = '0'; return; }
+    document.getElementById('factoriesCount').innerText = factories.length;
+    tbody.innerHTML = factories.map((f, idx) => `
+      <tr>
+        <td>${idx+1}</td>
+        <td>${escapeHtml(f.name)}</td>
+        <td>${f.distance ? f.distance.toFixed(2) : '—'}</td>
+        <td>${escapeHtml(f.location || '—')}</td>
+        <td>
+          <select class="priority-select" data-priority-idx="${idx}" onchange="updatePriority(${idx}, this.value)">
+            ${[1,2,3,4,5].map(p => `<option value="${p}" ${f.priority == p ? 'selected' : ''}>${p}${p==1 ? ' (أعلى)' : p==5 ? ' (أدنى)' : ''}</option>`).join('')}
+          </select>
+        </td>
+        <td class="actions">
+          <button class="btn soft btn-sm" data-edit-idx="${idx}">✏️ تعديل</button>
+          <button class="btn danger soft btn-sm" data-del-idx="${idx}">🗑️ حذف</button>
+        </td>
+      </tr>
+    `).join('');
+    // ربط الأحداث للأزرار التي تم إنشاؤها ديناميكيًا
+    document.querySelectorAll('[data-edit-idx]').forEach(btn => {
+      btn.onclick = () => openEditModal(parseInt(btn.getAttribute('data-edit-idx')));
+    });
+    document.querySelectorAll('[data-del-idx]').forEach(btn => {
+      btn.onclick = () => deleteFactory(parseInt(btn.getAttribute('data-del-idx')));
+    });
+  }
+
+  function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+
+  async function updatePriority(idx, newPriority) {
+    if (idx >= 0 && idx < factories.length) {
+      factories[idx].priority = parseInt(newPriority);
+      await saveFactories();
+      renderFactoriesTable(); // إعادة الرسم لتحديث القائمة (اختياري، لكنها تعيد إنشاء الـ select فتفقد التركيز)
+      showToast(`✅ تم تحديث أولوية "${factories[idx].name}" إلى ${newPriority}`, 'success');
+    }
+  }
+
+  async function addFactory() {
+    const name = document.getElementById('factoryName').value.trim();
+    const distance = parseFloat(document.getElementById('factoryDistance').value);
+    const location = document.getElementById('factoryLocation').value;
+    const priority = parseInt(document.getElementById('factoryPriority').value);
+    if (!name) { showToast('أدخل اسم المصنع', 'error'); return; }
+    if (isNaN(distance) || distance <= 0) { showToast('أدخل مسافة صحيحة (أكبر من 0)', 'error'); return; }
+    factories.push({ name, distance, location, priority });
+    await saveFactories();
+    document.getElementById('factoryName').value = '';
+    document.getElementById('factoryDistance').value = '';
+    document.getElementById('factoryPriority').value = '2';
+    renderFactoriesTable();
+    showToast('✅ تم إضافة المصنع', 'success');
+  }
+
+  function openEditModal(idx) {
+    const f = factories[idx];
+    document.getElementById('editFactoryIndex').value = idx;
+    document.getElementById('editFactoryName').value = f.name;
+    document.getElementById('editFactoryDistance').value = f.distance || '';
+    document.getElementById('editFactoryLocation').value = f.location || 'أخرى';
+    document.getElementById('editFactoryPriority').value = f.priority || 2;
+    openModal('editFactoryModal');
+  }
+
+  async function saveFactoryEdit() {
+    const idx = parseInt(document.getElementById('editFactoryIndex').value);
+    const name = document.getElementById('editFactoryName').value.trim();
+    const distance = parseFloat(document.getElementById('editFactoryDistance').value);
+    const location = document.getElementById('editFactoryLocation').value;
+    const priority = parseInt(document.getElementById('editFactoryPriority').value);
+    if (!name) { showToast('أدخل اسم المصنع', 'error'); return; }
+    if (isNaN(distance) || distance <= 0) { showToast('أدخل مسافة صحيحة', 'error'); return; }
+    factories[idx] = { name, distance, location, priority };
+    await saveFactories();
+    renderFactoriesTable();
+    closeModal('editFactoryModal');
+    showToast('✅ تم التعديل', 'success');
+  }
+
+  async function deleteFactory(idx) {
+    if (!confirm(`حذف المصنع "${factories[idx].name}"؟`)) return;
+    factories.splice(idx, 1);
+    await saveFactories();
+    renderFactoriesTable();
+    showToast('تم الحذف', 'info');
+  }
+
+  async function saveFactories() {
+    try {
+      const currentSettings = await apiCall('/settings');
+      const newSettings = {
+        factories: factories,
+        materials: currentSettings.materials || [],
+        trucks: currentSettings.trucks || []
+      };
+      await apiCall('/settings', 'PUT', newSettings);
+    } catch(e) {
+      console.error(e);
+      showToast('خطأ في حفظ البيانات', 'error');
+    }
+  }
+
+  // دوال عامة
+  function showToast(msg, type) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.position = 'fixed';
+      container.style.top = '20px';
+      container.style.left = '20px';
+      container.style.zIndex = '3000';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerText = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function showLoading(show) {
+    let loader = document.getElementById('globalLoader');
+    if (!loader) {
+      loader = document.createElement('div');
+      loader.id = 'globalLoader';
+      loader.style.position = 'fixed';
+      loader.style.top = '0';
+      loader.style.left = '0';
+      loader.style.width = '100%';
+      loader.style.height = '100%';
+      loader.style.background = 'rgba(0,0,0,0.6)';
+      loader.style.display = 'flex';
+      loader.style.alignItems = 'center';
+      loader.style.justifyContent = 'center';
+      loader.style.zIndex = '9999';
+      loader.innerHTML = '<div class="spinner"></div>';
+      document.body.appendChild(loader);
+    }
+    loader.style.display = show ? 'flex' : 'none';
+  }
+
+  function openModal(id) { document.getElementById(id).classList.add('active'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+  // تهيئة الصفحة
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadFactories();
+    document.getElementById('addFactoryBtn').onclick = addFactory;
+    document.getElementById('saveEditBtn').onclick = saveFactoryEdit;
+    document.getElementById('factoryName').addEventListener('keypress', (e) => { if (e.key === 'Enter') addFactory(); });
+    document.getElementById('factoryDistance').addEventListener('keypress', (e) => { if (e.key === 'Enter') addFactory(); });
+  });
+</script>

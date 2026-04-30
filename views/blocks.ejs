@@ -1,0 +1,413 @@
+<!-- views/blocks.ejs -->
+<style>
+  /* أنماط خاصة بصفحة القيود – متوافقة مع النظام */
+  .stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-mini {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.5rem;
+    text-align: center;
+    min-width: 120px;
+  }
+  .stat-mini .num {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary);
+  }
+  .restriction-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: 0.2s;
+  }
+  .restriction-item.inactive {
+    opacity: 0.6;
+  }
+  .restriction-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  .restriction-info h3 {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+  }
+  .restriction-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .factories-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  .factory-tag {
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.4);
+    border-radius: 40px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    color: var(--danger);
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 40px;
+    font-size: 0.7rem;
+    font-weight: bold;
+  }
+  .status-active { background: rgba(17,153,142,0.2); color: var(--success); }
+  .status-inactive { background: rgba(100,100,100,0.2); color: var(--text-muted); }
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+  }
+  .factories-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    background: var(--bg-sidebar);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+  }
+  .checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+  .checkbox-item input {
+    width: auto;
+  }
+</style>
+
+<div class="section-head">
+  <h2>⛔ قيود السائقين</h2>
+  <button class="btn danger" id="openAddBtn">➕ إضافة قيد جديد</button>
+</div>
+
+<div class="stats-row">
+  <div class="stat-mini"><div class="num" id="totalCount">0</div><div class="lbl">إجمالي القيود</div></div>
+  <div class="stat-mini"><div class="num" id="activeCount">0</div><div class="lbl">قيود نشطة</div></div>
+  <div class="stat-mini"><div class="num" id="inactiveCount">0</div><div class="lbl">قيود معطلة</div></div>
+</div>
+
+<div id="restrictionsList"></div>
+
+<!-- مودال إضافة/تعديل القيد -->
+<div class="modal" id="restrictionModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modalTitle">➕ إضافة قيد جديد</h3>
+      <button class="close-modal" onclick="closeModal()">&times;</button>
+    </div>
+    <input type="hidden" id="editId">
+    <div class="form-group">
+      <label>🚛 اختر السيارة</label>
+      <select id="truckSelect" class="form-control" onchange="onTruckChange()">
+        <option value="">-- اختر السيارة --</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>👤 السائق</label>
+      <input type="text" id="driverName" class="form-control" readonly placeholder="يتم تعبئته تلقائياً">
+    </div>
+    <div class="form-group">
+      <label>🏭 المصانع الممنوعة (اختر واحد أو أكثر)</label>
+      <div class="factories-checkboxes" id="factoriesCheckboxes">
+        <p class="muted center">جاري تحميل المصانع...</p>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>📝 سبب المنع</label>
+      <textarea id="restrictionReason" class="form-control" rows="3" placeholder="اكتب سبب المنع..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn soft" onclick="closeModal()">إلغاء</button>
+      <button class="btn primary" id="saveRestrictionBtn">حفظ القيد</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = '/api';
+  let restrictions = [];
+  let trucks = [];
+  let factories = [];
+
+  async function apiCall(endpoint, method = 'GET', data = null) {
+    const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+    if (data) options.body = JSON.stringify(data);
+    const res = await fetch(`${API_BASE}${endpoint}`, options);
+    if (res.status === 401) { window.location.href = '/login'; throw new Error('غير مصرح'); }
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function loadAll() {
+    showLoading(true);
+    try {
+      const [settingsData, restrictionsData] = await Promise.all([
+        apiCall('/settings'),
+        apiCall('/restrictions')
+      ]);
+      trucks = settingsData.trucks || [];
+      factories = (settingsData.factories || [])
+        .map(f => typeof f === 'string' ? f : f?.name || '')
+        .filter(f => f.trim());
+      restrictions = restrictionsData || [];
+      renderFactoriesCheckboxes();
+      renderTrucksSelect();
+      renderRestrictions();
+    } catch(e) {
+      showToast('خطأ في تحميل البيانات: ' + e.message, 'error');
+    }
+    showLoading(false);
+  }
+
+  function renderTrucksSelect() {
+    const select = document.getElementById('truckSelect');
+    select.innerHTML = '<option value="">-- اختر السيارة --</option>';
+    trucks.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.number;
+      opt.textContent = `${t.number} - ${t.driver || 'بدون سائق'}`;
+      opt.dataset.driver = t.driver || '';
+      select.appendChild(opt);
+    });
+  }
+
+  function renderFactoriesCheckboxes(selected = []) {
+    const container = document.getElementById('factoriesCheckboxes');
+    if (!factories.length) {
+      container.innerHTML = '<p class="muted center">لا توجد مصانع مسجلة</p>';
+      return;
+    }
+    container.innerHTML = factories.map(f => `
+      <div class="checkbox-item">
+        <input type="checkbox" id="fac_${f.replace(/\s/g,'_')}" value="${escapeHtml(f)}" ${selected.includes(f) ? 'checked' : ''}>
+        <label for="fac_${f.replace(/\s/g,'_')}">🏭 ${escapeHtml(f)}</label>
+      </div>
+    `).join('');
+  }
+
+  function renderRestrictions() {
+    const container = document.getElementById('restrictionsList');
+    const active = restrictions.filter(r => r.active !== false);
+    const inactive = restrictions.filter(r => r.active === false);
+    document.getElementById('totalCount').textContent = restrictions.length;
+    document.getElementById('activeCount').textContent = active.length;
+    document.getElementById('inactiveCount').textContent = inactive.length;
+
+    if (!restrictions.length) {
+      container.innerHTML = `<div class="empty-state"><div class="icon">⛔</div><p>لا توجد قيود مضافة</p></div>`;
+      return;
+    }
+
+    container.innerHTML = restrictions.map(r => {
+      const isActive = r.active !== false;
+      const facList = Array.isArray(r.restricted_factories) ? r.restricted_factories : [];
+      return `
+        <div class="restriction-item ${isActive ? '' : 'inactive'}">
+          <div class="restriction-header">
+            <div class="restriction-info">
+              <h3>🚛 سيارة رقم: ${escapeHtml(r.truck_number || '—')}
+                <span class="status-badge ${isActive ? 'status-active' : 'status-inactive'}">
+                  ${isActive ? '✅ نشط' : '⏸ معطل'}
+                </span>
+              </h3>
+              <p>👤 السائق: <strong>${escapeHtml(r.driver_name || '—')}</strong></p>
+              ${r.reason ? `<p>📝 السبب: ${escapeHtml(r.reason)}</p>` : ''}
+              <p class="muted" style="font-size:0.75rem;">🕐 ${r.created_at ? new Date(r.created_at).toLocaleDateString('ar-EG') : '—'}</p>
+            </div>
+            <div class="restriction-actions">
+              <button class="btn soft btn-sm" data-edit-id="${r.id}">✏️ تعديل</button>
+              <button class="btn soft btn-sm" data-toggle-id="${r.id}" data-active="${!isActive}">${isActive ? '⏸ تعطيل' : '▶️ تفعيل'}</button>
+              <button class="btn danger soft btn-sm" data-del-id="${r.id}">🗑️ حذف</button>
+            </div>
+          </div>
+          <div>
+            <p class="muted" style="margin-bottom:0.3rem;">🏭 المصانع الممنوعة:</p>
+            <div class="factories-tags">
+              ${facList.length ? facList.map(f => `<span class="factory-tag">⛔ ${escapeHtml(f)}</span>`).join('') : '<span class="muted">لا توجد</span>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // ربط الأحداث
+    document.querySelectorAll('[data-edit-id]').forEach(btn => {
+      btn.onclick = () => openEditModal(parseInt(btn.getAttribute('data-edit-id')));
+    });
+    document.querySelectorAll('[data-toggle-id]').forEach(btn => {
+      btn.onclick = () => toggleRestriction(parseInt(btn.getAttribute('data-toggle-id')), btn.getAttribute('data-active') === 'true');
+    });
+    document.querySelectorAll('[data-del-id]').forEach(btn => {
+      btn.onclick = () => deleteRestriction(parseInt(btn.getAttribute('data-del-id')));
+    });
+  }
+
+  function openAddModal() {
+    document.getElementById('modalTitle').innerText = '➕ إضافة قيد جديد';
+    document.getElementById('editId').value = '';
+    document.getElementById('truckSelect').value = '';
+    document.getElementById('driverName').value = '';
+    document.getElementById('restrictionReason').value = '';
+    renderFactoriesCheckboxes([]);
+    openModal();
+  }
+
+  function openEditModal(id) {
+    const r = restrictions.find(r => r.id === id);
+    if (!r) return;
+    document.getElementById('modalTitle').innerText = '✏️ تعديل القيد';
+    document.getElementById('editId').value = id;
+    document.getElementById('truckSelect').value = r.truck_number || '';
+    document.getElementById('driverName').value = r.driver_name || '';
+    document.getElementById('restrictionReason').value = r.reason || '';
+    const selected = Array.isArray(r.restricted_factories) ? r.restricted_factories : [];
+    renderFactoriesCheckboxes(selected);
+    openModal();
+  }
+
+  function onTruckChange() {
+    const select = document.getElementById('truckSelect');
+    const opt = select.options[select.selectedIndex];
+    document.getElementById('driverName').value = opt?.dataset?.driver || '';
+  }
+
+  function getSelectedFactories() {
+    return Array.from(document.querySelectorAll('#factoriesCheckboxes input[type="checkbox"]:checked'))
+      .map(cb => cb.value);
+  }
+
+  async function saveRestriction() {
+    const editId = document.getElementById('editId').value;
+    const truckNumber = document.getElementById('truckSelect').value;
+    const driverName = document.getElementById('driverName').value;
+    const reason = document.getElementById('restrictionReason').value.trim();
+    const selected = getSelectedFactories();
+
+    if (!truckNumber) { showToast('اختر السيارة', 'error'); return; }
+    if (!selected.length) { showToast('اختر مصنعاً واحداً على الأقل', 'error'); return; }
+
+    showLoading(true);
+    try {
+      if (editId) {
+        await apiCall(`/restrictions/${editId}`, 'DELETE');
+        await apiCall('/restrictions', 'POST', {
+          truckNumber, driverName, restrictedFactories: selected, reason
+        });
+        showToast('✅ تم تعديل القيد', 'success');
+      } else {
+        await apiCall('/restrictions', 'POST', {
+          truckNumber, driverName, restrictedFactories: selected, reason
+        });
+        showToast('✅ تم إضافة القيد', 'success');
+      }
+      closeModal();
+      await loadAll();
+    } catch(e) {
+      showToast('خطأ: ' + e.message, 'error');
+    }
+    showLoading(false);
+  }
+
+  async function toggleRestriction(id, newActive) {
+    showLoading(true);
+    try {
+      await apiCall(`/restrictions/${id}`, 'PUT', { active: newActive });
+      showToast(newActive ? '✅ تم تفعيل القيد' : '⏸ تم تعطيل القيد', 'success');
+      await loadAll();
+    } catch(e) {
+      showToast('خطأ: ' + e.message, 'error');
+    }
+    showLoading(false);
+  }
+
+  async function deleteRestriction(id) {
+    if (!confirm('هل تريد حذف هذا القيد نهائياً؟')) return;
+    showLoading(true);
+    try {
+      await apiCall(`/restrictions/${id}`, 'DELETE');
+      showToast('✅ تم حذف القيد', 'success');
+      await loadAll();
+    } catch(e) {
+      showToast('خطأ: ' + e.message, 'error');
+    }
+    showLoading(false);
+  }
+
+  // وظائف عامة
+  function openModal() { document.getElementById('restrictionModal').classList.add('active'); }
+  function closeModal() { document.getElementById('restrictionModal').classList.remove('active'); }
+
+  function showToast(msg, type) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.position = 'fixed';
+      container.style.top = '20px';
+      container.style.left = '20px';
+      container.style.zIndex = '3000';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerText = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function showLoading(show) {
+    let loader = document.getElementById('globalLoader');
+    if (!loader) {
+      loader = document.createElement('div');
+      loader.id = 'globalLoader';
+      loader.style.position = 'fixed';
+      loader.style.top = '0';
+      loader.style.left = '0';
+      loader.style.width = '100%';
+      loader.style.height = '100%';
+      loader.style.background = 'rgba(0,0,0,0.6)';
+      loader.style.display = 'flex';
+      loader.style.alignItems = 'center';
+      loader.style.justifyContent = 'center';
+      loader.style.zIndex = '9999';
+      loader.innerHTML = '<div class="spinner"></div>';
+      document.body.appendChild(loader);
+    }
+    loader.style.display = show ? 'flex' : 'none';
+  }
+
+  function escapeHtml(str) { return str ? str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])) : ''; }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadAll();
+    document.getElementById('openAddBtn').onclick = openAddModal;
+    document.getElementById('saveRestrictionBtn').onclick = saveRestriction;
+    // عند إغلاق المودال بالنقر خارج المحتوى
+    window.addEventListener('click', (e) => {
+      if (e.target === document.getElementById('restrictionModal')) closeModal();
+    });
+  });
+</script>

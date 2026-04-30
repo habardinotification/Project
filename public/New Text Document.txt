@@ -1,0 +1,46 @@
+Cannot GET /distribution-quality
+Cannot GET /drivers
+Cannot GET /scale_report
+Cannot GET /trucks-failed
+Cannot GET /trucks-failed-report
+Cannot GET /expenses
+Cannot GET /cash_orders
+Blocks
+api/restrictions:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+
+Users 
+[DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) <input type=​"password" id=​"newPassword" class=​"form-control">​
+users:1 [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) <input type=​"password" id=​"resetPassword" class=​"form-control">​
+users:1 [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) <input type=​"password" id=​"editPassword" class=​"form-control">​
+api/users:1  Failed to load resource: the server responded with a status of 404 (Not Found)Understand this error
+users:254 Error: <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /api/users</pre>
+</body>
+</html>
+
+    at apiCall (users:231:24)
+
+Logs
+
+api/logs?page=1&limit=50:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+logs:222 Error: <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /api/logs</pre>
+</body>
+</html>
+
+    at apiCall (logs:194:24)
+    at async loadLogs (logs:215:20)
+    at async HTMLDocument.<anonymous> (logs:393:7)
+loadLogs @ logs:222

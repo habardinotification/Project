@@ -1,0 +1,303 @@
+<!-- views/trucks-failed.ejs -->
+<style>
+  /* أنماط إضافية خاصة بصفحة السيارات غير المستوفية */
+  .stats {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    text-align: center;
+    flex: 1;
+    min-width: 140px;
+  }
+  .stat-card .number {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--primary);
+  }
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 40px;
+    font-size: 0.75rem;
+    font-weight: bold;
+  }
+  .badge-danger {
+    background: var(--danger);
+    color: white;
+  }
+  .badge-warning {
+    background: var(--warning);
+    color: white;
+  }
+  .reason-select, .reason-detail {
+    padding: 0.4rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    width: 100%;
+    min-width: 160px;
+  }
+  @media (max-width: 768px) {
+    .reason-select, .reason-detail {
+      min-width: 120px;
+    }
+  }
+</style>
+
+<div class="date-section card" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1.5rem;">
+  <div><label>📅 اختر التاريخ: </label><input type="date" id="reportDate" class="form-control"></div>
+  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+    <button class="btn primary" id="loadViolationsBtn">🔍 عرض السيارات غير المستوفية</button>
+    <button class="btn soft" id="saveAllReasonsBtn">💾 حفظ الأسباب على الخادم</button>
+    <button class="btn soft" id="advancedReportBtn">📊 تقرير السيارات غير المستوفية (متقدم)</button>
+  </div>
+</div>
+
+<div class="stats" id="statsSection" style="display: none;">
+  <div class="stat-card"><h4>🚛 إجمالي السيارات النشطة</h4><div class="number" id="totalTrucks">0</div></div>
+  <div class="stat-card"><h4>✅ حققت الهدف (رودين+)</h4><div class="number" id="achievedCount">0</div></div>
+  <div class="stat-card"><h4>⚠️ أقل من رودين</h4><div class="number" id="violatingCount">0</div></div>
+  <div class="stat-card"><h4>🚫 لم تعمل أي رود</h4><div class="number" id="zeroCount">0</div></div>
+</div>
+
+<h3>📋 السيارات التي لم تحقق الهدف (أقل من رودين)</h3>
+<div class="table-wrap">
+  <table id="violationsTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>رقم السيارة</th>
+        <th>السائق</th>
+        <th>عدد الرحلات</th>
+        <th>الرودات المطلوبة</th>
+        <th>الفجوة</th>
+        <th>السبب الرئيسي</th>
+        <th>تفاصيل إضافية</th>
+      </tr>
+    </thead>
+    <tbody id="violationsBody">
+      <tr><td colspan="8" class="muted center">اختر تاريخ ثم اضغط عرض</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="center" style="margin-top: 1rem;">
+  <button class="btn soft" id="saveFooterBtn">💾 حفظ جميع الأسباب المدخلة على الخادم</button>
+</div>
+
+<script>
+  const API_BASE = '/api';
+  let violationsData = [];
+  let currentDate = '';
+
+  // keep-alive
+  setInterval(async () => { try { await fetch('/api/me', { credentials: 'include' }); } catch(e) {} }, 3 * 60 * 1000);
+
+  async function apiCall(endpoint, method = 'GET', data = null) {
+    const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+    if (data) options.body = JSON.stringify(data);
+    const res = await fetch(`${API_BASE}${endpoint}`, options);
+    if (res.status === 401) { window.location.href = '/login'; throw new Error('غير مصرح'); }
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function loadSettings() {
+    try {
+      const data = await apiCall('/settings');
+      return data.trucks || [];
+    } catch(e) {
+      showToast('خطأ في تحميل السيارات', 'error');
+      return [];
+    }
+  }
+
+  async function getDistributionsForDate(date) {
+    try {
+      const dayData = await apiCall(`/day/${date}`);
+      return dayData.distribution || [];
+    } catch(e) {
+      return [];
+    }
+  }
+
+  async function loadViolations() {
+    currentDate = document.getElementById('reportDate').value;
+    if (!currentDate) { showToast('يرجى اختيار التاريخ', 'error'); return; }
+    showLoading(true);
+    try {
+      const trucks = await loadSettings();
+      const distributions = await getDistributionsForDate(currentDate);
+      const tripsMap = new Map();
+      distributions.forEach(d => { if (d.truck && d.truck.number) tripsMap.set(d.truck.number, (tripsMap.get(d.truck.number) || 0) + 1); });
+      let savedReasonsMap = new Map();
+      try {
+        const saved = await apiCall(`/truck-violations/${currentDate}`);
+        saved.forEach(s => savedReasonsMap.set(s.truck_number, { reason: s.reason || '', detail: s.details || '' }));
+      } catch(e) {}
+      const violations = [];
+      trucks.forEach(truck => {
+        const trips = tripsMap.get(truck.number) || 0;
+        if (trips < 2) {
+          const saved = savedReasonsMap.get(truck.number) || { reason: '', detail: '' };
+          violations.push({
+            number: truck.number,
+            driver: truck.driver || 'غير معروف',
+            trips: trips,
+            required: 2,
+            gap: 2 - trips,
+            reason: saved.reason,
+            detail: saved.detail
+          });
+        }
+      });
+      violationsData = violations;
+      const totalTrucks = trucks.length;
+      const achieved = totalTrucks - violations.length;
+      const zeroCount = violations.filter(v => v.trips === 0).length;
+      document.getElementById('statsSection').style.display = 'flex';
+      document.getElementById('totalTrucks').textContent = totalTrucks;
+      document.getElementById('achievedCount').textContent = achieved;
+      document.getElementById('violatingCount').textContent = violations.length;
+      document.getElementById('zeroCount').textContent = zeroCount;
+      renderViolationsTable(violations);
+    } catch(e) {
+      showToast('خطأ في تحميل البيانات: ' + e.message, 'error');
+    }
+    showLoading(false);
+  }
+
+  const reasonOptions = [
+    "عطل مفاجئ في الطريق",
+    "أمطار والطريق زلقة",
+    "الطريق مقفول رسمياً",
+    "لا يوجد بالكسارة بحص مقاس",
+    "عطل في السيارة داخل الكسارة / المصنع",
+    "المصنع قام بتأخير السائق ولم يتسلم الشحنة",
+    "السائق قام بالتأخير على الطريق عمداً",
+    "السيارة بالصيانة",
+    "السيارة ذهبت للدرعية",
+    "السيارة ذهبت للشركة الصينية",
+    "السيارة ذهبت لمصنع الجافورة",
+    "حادثة",
+    "انتهاء كارت التشغيل",
+    "مخالفة جسيمة تستدعي التدخل",
+    "أخرى"
+  ];
+
+  function renderViolationsTable(violations) {
+    const tbody = document.getElementById('violationsBody');
+    if (!violations.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="muted center">✅ لا توجد سيارات غير مستوفية اليوم، كل السيارات حققت الهدف</td></tr>';
+      return;
+    }
+    tbody.innerHTML = violations.map((v, idx) => {
+      const reasonSelect = `<select class="reason-select" data-index="${idx}" onchange="onReasonChange(${idx}, this.value)">
+        <option value="">-- اختر السبب --</option>
+        ${reasonOptions.map(opt => `<option value="${opt}" ${v.reason === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+      </select>`;
+      let detailPlaceholder = "تفاصيل إضافية...";
+      if (v.reason.includes("بحص مقاس")) detailPlaceholder = "أدخل المقاس المفقود (مثال: 3/4، 3/8)";
+      else if (v.reason.includes("عطل")) detailPlaceholder = "نوع العطل ومكانه";
+      else if (v.reason.includes("حادثة")) detailPlaceholder = "المكان والتفاصيل";
+      else if (v.reason.includes("مخالفة")) detailPlaceholder = "نوع المخالفة";
+      else if (v.reason.includes("صيانة")) detailPlaceholder = "سبب الصيانة والمدة المتوقعة";
+      else if (v.reason.includes("طريق مقفول")) detailPlaceholder = "الطريق وسببه";
+      else if (v.reason === "أخرى") detailPlaceholder = "السبب بالتفصيل";
+      const detailInput = `<input type="text" class="reason-detail" data-index="${idx}" placeholder="${detailPlaceholder}" value="${escapeHtml(v.detail)}" oninput="onDetailChange(${idx}, this.value)">`;
+      return `
+        <tr>
+          <td>${idx+1}</td>
+          <td><strong>${escapeHtml(v.number)}</strong></td>
+          <td>${escapeHtml(v.driver)}</td>
+          <td>${v.trips}</td>
+          <td>${v.required}</td>
+          <td class="badge ${v.gap > 0 ? 'badge-danger' : 'badge-warning'}">-${v.gap}</td>
+          <td>${reasonSelect}</td>
+          <td>${detailInput}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function onReasonChange(index, value) {
+    if (violationsData[index]) {
+      violationsData[index].reason = value;
+      renderViolationsTable(violationsData);
+    }
+  }
+  function onDetailChange(index, value) {
+    if (violationsData[index]) violationsData[index].detail = value;
+  }
+
+  async function saveAllReasons() {
+    if (!violationsData.length) { showToast('لا توجد سيارات غير مستوفية لحفظ الأسباب', 'error'); return; }
+    const missing = violationsData.filter(v => !v.reason);
+    if (missing.length) { showToast(`⚠️ لا يمكن الحفظ: ${missing.length} سيارة بدون سبب. يرجى اختيار سبب لكل سيارة.`, 'error'); return; }
+    if (!currentDate) { showToast('يرجى تحميل البيانات أولاً', 'error'); return; }
+    showLoading(true);
+    try {
+      const toSave = violationsData.map(v => ({ truckNumber: v.number, driver: v.driver, trips: v.trips, reason: v.reason || '', detail: v.detail || '' }));
+      await apiCall('/truck-violations/save', 'POST', { date: currentDate, violations: toSave });
+      showToast(`✅ تم حفظ أسباب ${violationsData.length} سيارة غير مستوفية على الخادم`, 'success');
+    } catch(e) { showToast('خطأ في الحفظ: ' + e.message, 'error'); }
+    showLoading(false);
+  }
+
+  function showToast(msg, type) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.position = 'fixed';
+      container.style.top = '20px';
+      container.style.left = '20px';
+      container.style.zIndex = '3000';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerText = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+  function showLoading(show) {
+    let loader = document.getElementById('globalLoader');
+    if (!loader) {
+      loader = document.createElement('div');
+      loader.id = 'globalLoader';
+      loader.style.position = 'fixed';
+      loader.style.top = '0';
+      loader.style.left = '0';
+      loader.style.width = '100%';
+      loader.style.height = '100%';
+      loader.style.background = 'rgba(0,0,0,0.6)';
+      loader.style.display = 'flex';
+      loader.style.alignItems = 'center';
+      loader.style.justifyContent = 'center';
+      loader.style.zIndex = '9999';
+      loader.innerHTML = '<div class="spinner"></div>';
+      document.body.appendChild(loader);
+    }
+    loader.style.display = show ? 'flex' : 'none';
+  }
+  function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('reportDate').value = today;
+    loadViolations();
+
+    document.getElementById('loadViolationsBtn').onclick = loadViolations;
+    document.getElementById('saveAllReasonsBtn').onclick = saveAllReasons;
+    document.getElementById('saveFooterBtn').onclick = saveAllReasons;
+    document.getElementById('advancedReportBtn').onclick = () => window.location.href = '/trucks-failed-report';
+  });
+</script>
